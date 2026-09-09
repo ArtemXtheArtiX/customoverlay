@@ -67,9 +67,9 @@ public class EditOverlayScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyInput input) {
-		// ИСПРАВЛЕНО: input.key().getCode()
-		if (input.key().getCode() == 256) { ConfigManager.save(); close(); return true; }
-		if (input.key().getCode() == 261 && selectedField != null) {
+		// ИСПРАВЛЕНО: input.key() возвращает int напрямую
+		if (input.key() == 256) { ConfigManager.save(); close(); return true; }
+		if (input.key() == 261 && selectedField != null) {
 			selectedField.cleanup(); OverlayRenderer.fields.remove(selectedField);
 			selectedField = null; OverlayRenderer.selectedField = null; ConfigManager.save(); return true;
 		}
