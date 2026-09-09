@@ -1,5 +1,6 @@
 package ru.yourname.client;
 
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.texture.NativeImage;
@@ -94,16 +95,16 @@ public class TextField {
 	public void render(DrawContext context, boolean editMode) {
 		if (!isLoaded) return;
 		
-		// ИСПРАВЛЕНО: передаем Identifier и правильные аргументы (x, y, z, u, v, width, height, texWidth, texHeight)
+		// ИСПРАВЛЕНО: добавлен RenderPipeline.GUI_TEXTURED как первый аргумент
 		if (isGif && gifTextureIds != null && !gifTextureIds.isEmpty()) {
 			long now = System.currentTimeMillis();
 			if (now - lastFrameTime >= (frameDelays.get(currentFrame) / speed)) {
 				currentFrame = (currentFrame + 1) % gifTextureIds.size(); lastFrameTime = now;
 			}
 			Identifier currentId = gifTextureIds.get(currentFrame);
-			context.drawTexture(currentId, x, y, 0, 0.0f, 0.0f, width, height, width, height);
+			context.drawTexture(RenderPipeline.GUI_TEXTURED, currentId, x, y, 0.0f, 0.0f, width, height, width, height);
 		} else if (textureId != null) {
-			context.drawTexture(textureId, x, y, 0, 0.0f, 0.0f, width, height, width, height);
+			context.drawTexture(RenderPipeline.GUI_TEXTURED, textureId, x, y, 0.0f, 0.0f, width, height, width, height);
 		}
 		
 		if (editMode && OverlayRenderer.selectedField == this) {
