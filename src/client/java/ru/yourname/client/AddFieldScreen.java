@@ -41,7 +41,8 @@ public class AddFieldScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyInput input) {
-		if (input.keyCode() == 256) { close(); return true; }
+		// ИСПРАВЛЕНО: input.key().getCode()
+		if (input.key().getCode() == 256) { close(); return true; }
 		return super.keyPressed(input);
 	}
 }
