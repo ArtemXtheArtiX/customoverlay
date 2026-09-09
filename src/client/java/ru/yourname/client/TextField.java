@@ -1,6 +1,6 @@
 package ru.yourname.client;
 
-import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.pipeline.RenderPipelines; // ИСПРАВЛЕНО: RenderPipelines (во множественном числе)
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.texture.NativeImage;
@@ -95,16 +95,16 @@ public class TextField {
 	public void render(DrawContext context, boolean editMode) {
 		if (!isLoaded) return;
 		
-		// ИСПРАВЛЕНО: добавлен RenderPipeline.GUI_TEXTURED как первый аргумент
+		// ИСПРАВЛЕНО: RenderPipelines.GUI_TEXTURED (во множественном числе)
 		if (isGif && gifTextureIds != null && !gifTextureIds.isEmpty()) {
 			long now = System.currentTimeMillis();
 			if (now - lastFrameTime >= (frameDelays.get(currentFrame) / speed)) {
 				currentFrame = (currentFrame + 1) % gifTextureIds.size(); lastFrameTime = now;
 			}
 			Identifier currentId = gifTextureIds.get(currentFrame);
-			context.drawTexture(RenderPipeline.GUI_TEXTURED, currentId, x, y, 0.0f, 0.0f, width, height, width, height);
+			context.drawTexture(RenderPipelines.GUI_TEXTURED, currentId, x, y, 0.0f, 0.0f, width, height, width, height);
 		} else if (textureId != null) {
-			context.drawTexture(RenderPipeline.GUI_TEXTURED, textureId, x, y, 0.0f, 0.0f, width, height, width, height);
+			context.drawTexture(RenderPipelines.GUI_TEXTURED, textureId, x, y, 0.0f, 0.0f, width, height, width, height);
 		}
 		
 		if (editMode && OverlayRenderer.selectedField == this) {
