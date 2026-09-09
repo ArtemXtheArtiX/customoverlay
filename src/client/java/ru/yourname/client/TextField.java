@@ -23,8 +23,8 @@ public class TextField {
 	public float alpha = 1.0f;
 	public float speed = 1.0f;
 
-	private NativeImageBackedTexture texture;
-	private List<NativeImageBackedTexture> gifFrames;
+	private Identifier textureId;
+	private List<Identifier> gifTextureIds;
 	private List<Integer> frameDelays;
 	private int currentFrame = 0;
 	private long lastFrameTime = 0;
@@ -50,8 +50,9 @@ public class TextField {
 		NativeImage img = NativeImage.read(is);
 		if (img.getWidth() > MAX_DIMENSION || img.getHeight() > MAX_DIMENSION) img = resizeImage(img, MAX_DIMENSION, MAX_DIMENSION);
 		MinecraftClient.getInstance().execute(() -> {
-			texture = new NativeImageBackedTexture(() -> "customoverlay", img);
-			MinecraftClient.getInstance().getTextureManager().registerTexture(Identifier.of("customoverlay", "static_" + imageUrlOrPath.hashCode()), texture);
+			NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "customoverlay", img);
+			textureId = Identifier.of("customoverlay", "static_" + imageUrlOrPath.hashCode());
+			MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, tex);
 		});
 	}
 
@@ -61,15 +62,16 @@ public class TextField {
 		reader.setInput(iis);
 		int numFrames = reader.getNumImages(true);
 		MinecraftClient.getInstance().execute(() -> {
-			gifFrames = new ArrayList<>(); frameDelays = new ArrayList<>();
+			gifTextureIds = new ArrayList<>(); frameDelays = new ArrayList<>();
 			for (int i = 0; i < numFrames; i++) {
 				try {
 					java.awt.image.BufferedImage bImg = reader.read(i);
 					NativeImage img = NativeImage.read(new java.io.ByteArrayOutputStream() {{ ImageIO.write(bImg, "png", this); }}.toByteArray());
 					if (img.getWidth() > MAX_DIMENSION || img.getHeight() > MAX_DIMENSION) img = resizeImage(img, MAX_DIMENSION, MAX_DIMENSION);
 					NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "customoverlay", img);
-					MinecraftClient.getInstance().getTextureManager().registerTexture(Identifier.of("customoverlay", "gif_" + imageUrlOrPath.hashCode() + "_" + i), tex);
-					gifFrames.add(tex); frameDelays.add(100);
+					Identifier id = Identifier.of("customoverlay", "gif_" + imageUrlOrPath.hashCode() + "_" + i);
+					MinecraftClient.getInstance().getTextureManager().registerTexture(id, tex);
+					gifTextureIds.add(id); frameDelays.add(100);
 				} catch (Exception e) { Customoverlay.LOGGER.warn("Skipped frame " + i); }
 			}
 			reader.dispose();
@@ -91,15 +93,19 @@ public class TextField {
 
 	public void render(DrawContext context, boolean editMode) {
 		if (!isLoaded) return;
-		if (isGif && gifFrames != null && !gifFrames.isEmpty()) {
+		
+		// ИСПРАВЛЕНО: передаем Identifier и правильные аргументы (x, y, z, u, v, width, height, texWidth, texHeight)
+		if (isGif && gifTextureIds != null && !gifTextureIds.isEmpty()) {
 			long now = System.currentTimeMillis();
 			if (now - lastFrameTime >= (frameDelays.get(currentFrame) / speed)) {
-				currentFrame = (currentFrame + 1) % gifFrames.size(); lastFrameTime = now;
+				currentFrame = (currentFrame + 1) % gifTextureIds.size(); lastFrameTime = now;
 			}
-			context.drawTexture(gifFrames.get(currentFrame).getGlTexture(), x, y, 0, 0, width, height, width, height);
-		} else if (texture != null) {
-			context.drawTexture(texture.getGlTexture(), x, y, 0, 0, width, height, width, height);
+			Identifier currentId = gifTextureIds.get(currentFrame);
+			context.drawTexture(currentId, x, y, 0, 0.0f, 0.0f, width, height, width, height);
+		} else if (textureId != null) {
+			context.drawTexture(textureId, x, y, 0, 0.0f, 0.0f, width, height, width, height);
 		}
+		
 		if (editMode && OverlayRenderer.selectedField == this) {
 			context.fill(x - 2, y - 2, x + width + 2, y + height + 2, 0x80FFFF00);
 			context.fill(x + width - 8, y + height - 8, x + width, y + height, 0xFF0088FF);
@@ -110,7 +116,7 @@ public class TextField {
 	public boolean isOverResizeCorner(double mouseX, double mouseY) { return mouseX >= x + width - 8 && mouseX <= x + width && mouseY >= y + height - 8 && mouseY <= y + height; }
 
 	public void cleanup() {
-		if (texture != null) texture.close();
-		if (gifFrames != null) { for (var t : gifFrames) t.close(); gifFrames.clear(); }
+		gifTextureIds = null;
+		textureId = null;
 	}
 }
