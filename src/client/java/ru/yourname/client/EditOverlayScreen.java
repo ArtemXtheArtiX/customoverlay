@@ -1,7 +1,9 @@
 package ru.yourname.client;
 
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 
 public class EditOverlayScreen extends Screen {
@@ -12,8 +14,10 @@ public class EditOverlayScreen extends Screen {
 	public EditOverlayScreen() { super(Text.literal("Edit Overlay")); }
 
 	@Override
-	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-		if (button == 0) {
+	public boolean mouseClicked(Click click, boolean doubleClick) {
+		if (click.button() == 0) {
+			double mouseX = click.x();
+			double mouseY = click.y();
 			for (int i = OverlayRenderer.fields.size() - 1; i >= 0; i--) {
 				TextField f = OverlayRenderer.fields.get(i);
 				if (f.isMouseOver(mouseX, mouseY)) {
@@ -29,12 +33,14 @@ public class EditOverlayScreen extends Screen {
 			}
 			selectedField = null; OverlayRenderer.selectedField = null;
 		}
-		return super.mouseClicked(mouseX, mouseY, button);
+		return super.mouseClicked(click, doubleClick);
 	}
 
 	@Override
-	public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+	public boolean mouseDragged(Click click, double deltaX, double deltaY) {
 		if (selectedField != null) {
+			double mouseX = click.x();
+			double mouseY = click.y();
 			if (dragging) { selectedField.x = (int) (mouseX - dragOffsetX); selectedField.y = (int) (mouseY - dragOffsetY); }
 			else if (resizing) {
 				selectedField.width = Math.max(32, startWidth + (int)(mouseX - startResizeX));
@@ -42,14 +48,14 @@ public class EditOverlayScreen extends Screen {
 			}
 			return true;
 		}
-		return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+		return super.mouseDragged(click, deltaX, deltaY);
 	}
 
 	@Override
-	public boolean mouseReleased(double mouseX, double mouseY, int button) {
+	public boolean mouseReleased(Click click) {
 		dragging = false; resizing = false;
 		if (selectedField != null) ConfigManager.save();
-		return super.mouseReleased(mouseX, mouseY, button);
+		return super.mouseReleased(click);
 	}
 
 	@Override
@@ -60,12 +66,12 @@ public class EditOverlayScreen extends Screen {
 	}
 
 	@Override
-	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		if (keyCode == 256) { ConfigManager.save(); close(); return true; }
-		if (keyCode == 261 && selectedField != null) {
+	public boolean keyPressed(KeyInput input) {
+		if (input.keyCode() == 256) { ConfigManager.save(); close(); return true; }
+		if (input.keyCode() == 261 && selectedField != null) {
 			selectedField.cleanup(); OverlayRenderer.fields.remove(selectedField);
 			selectedField = null; OverlayRenderer.selectedField = null; ConfigManager.save(); return true;
 		}
-		return super.keyPressed(keyCode, scanCode, modifiers);
+		return super.keyPressed(input);
 	}
 }
