@@ -6,12 +6,14 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public class CustomoverlayClient implements ClientModInitializer {
 	public static KeyBinding keyEditMode;
 	public static KeyBinding keyAddField;
-	public static final KeyBinding.Category CATEGORY = new KeyBinding.Category("category.customoverlay");
+	// ИСПРАВЛЕНО: Category теперь принимает Identifier
+	public static final KeyBinding.Category CATEGORY = new KeyBinding.Category(Identifier.of("customoverlay", "category"));
 
 	@Override
 	public void onInitializeClient() {
