@@ -4,6 +4,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 
 public class AddFieldScreen extends Screen {
@@ -39,8 +40,8 @@ public class AddFieldScreen extends Screen {
 	}
 
 	@Override
-	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		if (keyCode == 256) { close(); return true; }
-		return super.keyPressed(keyCode, scanCode, modifiers);
+	public boolean keyPressed(KeyInput input) {
+		if (input.keyCode() == 256) { close(); return true; }
+		return super.keyPressed(input);
 	}
 }
