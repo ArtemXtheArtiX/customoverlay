@@ -1,6 +1,6 @@
 package ru.yourname.client;
 
-import com.mojang.blaze3d.pipeline.RenderPipelines; // ИСПРАВЛЕНО: RenderPipelines (во множественном числе)
+import net.minecraft.client.gl.RenderPipelines; // ИСПРАВЛЕНО: правильный пакет
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.texture.NativeImage;
@@ -95,7 +95,7 @@ public class TextField {
 	public void render(DrawContext context, boolean editMode) {
 		if (!isLoaded) return;
 		
-		// ИСПРАВЛЕНО: RenderPipelines.GUI_TEXTURED (во множественном числе)
+		// ИСПРАВЛЕНО: RenderPipelines.GUI_TEXTURED из правильного пакета
 		if (isGif && gifTextureIds != null && !gifTextureIds.isEmpty()) {
 			long now = System.currentTimeMillis();
 			if (now - lastFrameTime >= (frameDelays.get(currentFrame) / speed)) {
