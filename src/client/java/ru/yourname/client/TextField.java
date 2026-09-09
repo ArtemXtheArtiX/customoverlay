@@ -5,6 +5,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.util.Identifier;
+import ru.yourname.Customoverlay;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
@@ -14,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TextField {
-	private static final int MAX_DIMENSION = 512; // 🔥 ЗАЩИТА ОТ OOM
+	private static final int MAX_DIMENSION = 512;
 
 	public int x, y, width, height;
 	public String imageUrlOrPath;
@@ -49,7 +50,7 @@ public class TextField {
 		NativeImage img = NativeImage.read(is);
 		if (img.getWidth() > MAX_DIMENSION || img.getHeight() > MAX_DIMENSION) img = resizeImage(img, MAX_DIMENSION, MAX_DIMENSION);
 		MinecraftClient.getInstance().execute(() -> {
-			texture = new NativeImageBackedTexture(img);
+			texture = new NativeImageBackedTexture(() -> "customoverlay", img);
 			MinecraftClient.getInstance().getTextureManager().registerTexture(Identifier.of("customoverlay", "static_" + imageUrlOrPath.hashCode()), texture);
 		});
 	}
@@ -66,7 +67,7 @@ public class TextField {
 					java.awt.image.BufferedImage bImg = reader.read(i);
 					NativeImage img = NativeImage.read(new java.io.ByteArrayOutputStream() {{ ImageIO.write(bImg, "png", this); }}.toByteArray());
 					if (img.getWidth() > MAX_DIMENSION || img.getHeight() > MAX_DIMENSION) img = resizeImage(img, MAX_DIMENSION, MAX_DIMENSION);
-					NativeImageBackedTexture tex = new NativeImageBackedTexture(img);
+					NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "customoverlay", img);
 					MinecraftClient.getInstance().getTextureManager().registerTexture(Identifier.of("customoverlay", "gif_" + imageUrlOrPath.hashCode() + "_" + i), tex);
 					gifFrames.add(tex); frameDelays.add(100);
 				} catch (Exception e) { Customoverlay.LOGGER.warn("Skipped frame " + i); }
@@ -80,7 +81,11 @@ public class TextField {
 		if (scale >= 1.0f) return img;
 		int newW = (int) (img.getWidth() * scale), newH = (int) (img.getHeight() * scale);
 		NativeImage resized = new NativeImage(NativeImage.Format.RGBA, newW, newH, false);
-		for (int y = 0; y < newH; y++) for (int x = 0; x < newW; x++) resized.setColor(x, y, img.getColor((int)(x / scale), (int)(y / scale)));
+		for (int y = 0; y < newH; y++) {
+			for (int x = 0; x < newW; x++) {
+				resized.setColorArgb(x, y, img.getColorArgb((int)(x / scale), (int)(y / scale)));
+			}
+		}
 		img.close(); return resized;
 	}
 
@@ -91,9 +96,9 @@ public class TextField {
 			if (now - lastFrameTime >= (frameDelays.get(currentFrame) / speed)) {
 				currentFrame = (currentFrame + 1) % gifFrames.size(); lastFrameTime = now;
 			}
-			context.drawTexture(gifFrames.get(currentFrame).getGlId(), x, y, 0, 0, width, height, width, height);
+			context.drawTexture(gifFrames.get(currentFrame).getGlTexture(), x, y, 0, 0, width, height, width, height);
 		} else if (texture != null) {
-			context.drawTexture(texture.getGlId(), x, y, 0, 0, width, height, width, height);
+			context.drawTexture(texture.getGlTexture(), x, y, 0, 0, width, height, width, height);
 		}
 		if (editMode && OverlayRenderer.selectedField == this) {
 			context.fill(x - 2, y - 2, x + width + 2, y + height + 2, 0x80FFFF00);
@@ -101,7 +106,6 @@ public class TextField {
 		}
 	}
 
-	// 🔥 ИСПРАВЛЕНИЕ МЫШИ: прямая проверка без умножения на scale
 	public boolean isMouseOver(double mouseX, double mouseY) { return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height; }
 	public boolean isOverResizeCorner(double mouseX, double mouseY) { return mouseX >= x + width - 8 && mouseX <= x + width && mouseY >= y + height - 8 && mouseY <= y + height; }
 
