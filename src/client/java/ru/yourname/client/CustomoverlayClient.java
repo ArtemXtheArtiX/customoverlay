@@ -11,14 +11,15 @@ import org.lwjgl.glfw.GLFW;
 public class CustomoverlayClient implements ClientModInitializer {
 	public static KeyBinding keyEditMode;
 	public static KeyBinding keyAddField;
+	public static final KeyBinding.Category CATEGORY = new KeyBinding.Category("category.customoverlay");
 
 	@Override
 	public void onInitializeClient() {
 		keyEditMode = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-			"key.customoverlay.editmode", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_R, "category.customoverlay"
+			"key.customoverlay.editmode", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY
 		));
 		keyAddField = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-			"key.customoverlay.addfield", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_K, "category.customoverlay"
+			"key.customoverlay.addfield", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_K, CATEGORY
 		));
 
 		ConfigManager.load();
