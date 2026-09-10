@@ -24,6 +24,10 @@ public class TextField {
 	public boolean isGif;
 	public float alpha = 1.0f;
 	public float speed = 1.0f;
+	
+	// НОВОЕ: для сохранения пропорций в предпросмотре
+	public int originalWidth = 0, originalHeight = 0;
+	public boolean keepAspect = false;
 
 	private Identifier textureId;
 	private List<Identifier> gifTextureIds;
@@ -50,6 +54,10 @@ public class TextField {
 
 	private void loadStatic(InputStream is) throws Exception {
 		NativeImage originalImg = NativeImage.read(is);
+		// Сохраняем оригинальные размеры
+		originalWidth = originalImg.getWidth();
+		originalHeight = originalImg.getHeight();
+		
 		final NativeImage finalImg;
 		if (originalImg.getWidth() > MAX_DIMENSION || originalImg.getHeight() > MAX_DIMENSION) {
 			finalImg = resizeImage(originalImg, MAX_DIMENSION, MAX_DIMENSION);
@@ -79,6 +87,12 @@ public class TextField {
 						ImageIO.write(bImg, "png", this); 
 					}}.toByteArray());
 					
+					// Сохраняем оригинальные размеры (только для первого кадра)
+					if (i == 0) {
+						originalWidth = originalImg.getWidth();
+						originalHeight = originalImg.getHeight();
+					}
+					
 					final NativeImage finalImg;
 					if (originalImg.getWidth() > MAX_DIMENSION || originalImg.getHeight() > MAX_DIMENSION) {
 						finalImg = resizeImage(originalImg, MAX_DIMENSION, MAX_DIMENSION);
@@ -101,7 +115,6 @@ public class TextField {
 	}
 
 	private NativeImage resizeImage(NativeImage img, int maxW, int maxH) {
-		// Вычисляем масштаб так, чтобы изображение вписалось в maxW x maxH, сохраняя пропорции
 		float scaleX = (float) maxW / img.getWidth();
 		float scaleY = (float) maxH / img.getHeight();
 		float scale = Math.min(scaleX, scaleY);
@@ -123,8 +136,18 @@ public class TextField {
 	public void render(DrawContext context, boolean editMode) {
 		if (!isLoaded) return;
 		
-		// Вычисляем цвет с учётом прозрачности (ARGB)
+		// Вычисляем цвет с учётом прозрачности
 		int color = ((int)(this.alpha * 255) << 24) | 0x00FFFFFF;
+
+		// НОВОЕ: вычисляем размеры с сохранением пропорций, если нужно
+		int drawW = width, drawH = height;
+		if (keepAspect && originalWidth > 0 && originalHeight > 0) {
+			float scaleX = (float) width / originalWidth;
+			float scaleY = (float) height / originalHeight;
+			float scale = Math.min(scaleX, scaleY);
+			drawW = (int) (originalWidth * scale);
+			drawH = (int) (originalHeight * scale);
+		}
 
 		if (isGif && gifTextureIds != null && !gifTextureIds.isEmpty()) {
 			long now = System.currentTimeMillis();
@@ -133,13 +156,12 @@ public class TextField {
 				lastFrameTime = now;
 			}
 			Identifier currentId = gifTextureIds.get(currentFrame);
-			context.drawTexture(RenderPipelines.GUI_TEXTURED, currentId, x, y, 0.0f, 0.0f, width, height, width, height, color);
+			context.drawTexture(RenderPipelines.GUI_TEXTURED, currentId, x, y, 0.0f, 0.0f, drawW, drawH, drawW, drawH, color);
 		} else if (textureId != null) {
-			context.drawTexture(RenderPipelines.GUI_TEXTURED, textureId, x, y, 0.0f, 0.0f, width, height, width, height, color);
+			context.drawTexture(RenderPipelines.GUI_TEXTURED, textureId, x, y, 0.0f, 0.0f, drawW, drawH, drawW, drawH, color);
 		}
 		
 		if (editMode && OverlayRenderer.selectedField == this) {
-			// Рисуем жёлтую обводку вручную (4 линии)
 			int bx = x - 2, by = y - 2, bw = width + 4, bh = height + 4;
 			int c = 0xFFFFFF00;
 			context.fill(bx, by, bx + bw, by + 1, c);
@@ -147,7 +169,6 @@ public class TextField {
 			context.fill(bx, by, bx + 1, by + bh, c);
 			context.fill(bx + bw - 1, by, bx + bw, by + bh, c);
 			
-			// Синий квадрат для ресайза
 			context.fill(x + width - 8, y + height - 8, x + width, y + height, 0xFF0088FF);
 		}
 	}
