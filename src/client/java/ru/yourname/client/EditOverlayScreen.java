@@ -113,8 +113,8 @@ public class EditOverlayScreen extends Screen {
 		context.fill(5, listTop, 5 + listWidth, listTop + listHeight, 0xDD000000);
 		context.fill(5 + listWidth, listTop, 6 + listWidth, listTop + listHeight, 0xFFFFFFFF);
 		
-		// ИСПРАВЛЕНО: используем Text.literal() вместо String
-		context.drawText(textRenderer, Text.literal("Active Fields:"), 10, listTop + 5, 0xFFFFAA, true);
+		// ИСПРАВЛЕНО: используем drawTextWithShadow для гарантии видимости
+		context.drawTextWithShadow(textRenderer, "Active Fields:", 10, listTop + 5, 0xFFFFAA);
 		
 		int y = listTop + 20;
 		for (int i = 0; i < OverlayRenderer.fields.size(); i++) {
@@ -127,7 +127,7 @@ public class EditOverlayScreen extends Screen {
 			if (name.length() > 15) name = name.substring(0, 12) + "...";
 			
 			int color = (f == selectedField) ? 0x55FF55 : 0xFFFFFF;
-			context.drawText(textRenderer, Text.literal("📄 " + name), 10, y, color, true);
+			context.drawTextWithShadow(textRenderer, "📄 " + name, 10, y, color);
 			y += 14;
 		}
 
@@ -170,13 +170,13 @@ public class EditOverlayScreen extends Screen {
 			int sliderX = x + (int) (value * (width - 6));
 			context.fill(sliderX, y + 1, sliderX + 6, y + height - 1, 0xFFAAAAAA);
 			
-			// ИСПРАВЛЕНО: используем Text.literal()
+			// ИСПРАВЛЕНО: используем drawTextWithShadow со String
 			String text = String.format("Alpha: %.0f%%", value * 100);
 			int textX = x + width + 6;
 			if (textX + textRenderer.getWidth(text) > screenWidth - 5) {
 				textX = x - textRenderer.getWidth(text) - 6;
 			}
-			context.drawText(textRenderer, Text.literal(text), textX, y, 0xFFFFFF, true);
+			context.drawTextWithShadow(textRenderer, text, textX, y, 0xFFFFFF);
 		}
 
 		boolean isMouseOver(double mx, double my) { return mx >= x && mx <= x + width && my >= y && my <= y + height; }
@@ -212,13 +212,13 @@ public class EditOverlayScreen extends Screen {
 			int sliderX = x + (int) (value * (width - 6));
 			context.fill(sliderX, y + 1, sliderX + 6, y + height - 1, 0xFFAAAAAA);
 			
-			// ИСПРАВЛЕНО: используем Text.literal()
+			// ИСПРАВЛЕНО: используем drawTextWithShadow со String
 			String text = String.format("Speed: %.1fx", mapLinearToSpeed(value));
 			int textX = x + width + 6;
 			if (textX + textRenderer.getWidth(text) > screenWidth - 5) {
 				textX = x - textRenderer.getWidth(text) - 6;
 			}
-			context.drawText(textRenderer, Text.literal(text), textX, y, 0xFFFFFF, true);
+			context.drawTextWithShadow(textRenderer, text, textX, y, 0xFFFFFF);
 		}
 
 		boolean isMouseOver(double mx, double my) { return mx >= x && mx <= x + width && my >= y && my <= y + height; }
