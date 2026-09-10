@@ -49,15 +49,13 @@ public class TextField {
 
 	private void loadStatic(InputStream is) throws Exception {
 		NativeImage originalImg = NativeImage.read(is);
-		// ИСПРАВЛЕНО: используем final переменную, чтобы она была effectively final для лямбды
 		final NativeImage finalImg;
 		if (originalImg.getWidth() > MAX_DIMENSION || originalImg.getHeight() > MAX_DIMENSION) {
 			finalImg = resizeImage(originalImg, MAX_DIMENSION, MAX_DIMENSION);
-			originalImg.close(); // Освобождаем память оригинала, если он был уменьшен
+			originalImg.close();
 		} else {
 			finalImg = originalImg;
 		}
-		
 		MinecraftClient.getInstance().execute(() -> {
 			NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "customoverlay", finalImg);
 			textureId = Identifier.of("customoverlay", "static_" + imageUrlOrPath.hashCode());
@@ -71,16 +69,11 @@ public class TextField {
 		reader.setInput(iis);
 		int numFrames = reader.getNumImages(true);
 		MinecraftClient.getInstance().execute(() -> {
-			gifTextureIds = new ArrayList<>(); 
-			frameDelays = new ArrayList<>();
+			gifTextureIds = new ArrayList<>(); frameDelays = new ArrayList<>();
 			for (int i = 0; i < numFrames; i++) {
 				try {
 					java.awt.image.BufferedImage bImg = reader.read(i);
-					NativeImage originalImg = NativeImage.read(new java.io.ByteArrayOutputStream() {{ 
-						ImageIO.write(bImg, "png", this); 
-					}}.toByteArray());
-					
-					// ИСПРАВЛЕНО: используем final переменную для лямбды
+					NativeImage originalImg = NativeImage.read(new java.io.ByteArrayOutputStream() {{ ImageIO.write(bImg, "png", this); }}.toByteArray());
 					final NativeImage finalImg;
 					if (originalImg.getWidth() > MAX_DIMENSION || originalImg.getHeight() > MAX_DIMENSION) {
 						finalImg = resizeImage(originalImg, MAX_DIMENSION, MAX_DIMENSION);
@@ -88,15 +81,11 @@ public class TextField {
 					} else {
 						finalImg = originalImg;
 					}
-					
 					NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "customoverlay", finalImg);
 					Identifier id = Identifier.of("customoverlay", "gif_" + imageUrlOrPath.hashCode() + "_" + i);
 					MinecraftClient.getInstance().getTextureManager().registerTexture(id, tex);
-					gifTextureIds.add(id); 
-					frameDelays.add(100);
-				} catch (Exception e) { 
-					Customoverlay.LOGGER.warn("Skipped frame " + i); 
-				}
+					gifTextureIds.add(id); frameDelays.add(100);
+				} catch (Exception e) { Customoverlay.LOGGER.warn("Skipped frame " + i); }
 			}
 			reader.dispose();
 		});
@@ -118,16 +107,18 @@ public class TextField {
 	public void render(DrawContext context, boolean editMode) {
 		if (!isLoaded) return;
 		
+		// Вычисляем цвет с нужной прозрачностью (белый цвет + альфа)
+		int color = ((int)(this.alpha * 255) << 24) | 0x00FFFFFF;
+
 		if (isGif && gifTextureIds != null && !gifTextureIds.isEmpty()) {
 			long now = System.currentTimeMillis();
 			if (now - lastFrameTime >= (frameDelays.get(currentFrame) / speed)) {
-				currentFrame = (currentFrame + 1) % gifTextureIds.size(); 
-				lastFrameTime = now;
+				currentFrame = (currentFrame + 1) % gifTextureIds.size(); lastFrameTime = now;
 			}
 			Identifier currentId = gifTextureIds.get(currentFrame);
-			context.drawTexture(RenderPipelines.GUI_TEXTURED, currentId, x, y, 0.0f, 0.0f, width, height, width, height);
+			context.drawTexture(RenderPipelines.GUI_TEXTURED, currentId, x, y, 0.0f, 0.0f, width, height, width, height, color);
 		} else if (textureId != null) {
-			context.drawTexture(RenderPipelines.GUI_TEXTURED, textureId, x, y, 0.0f, 0.0f, width, height, width, height);
+			context.drawTexture(RenderPipelines.GUI_TEXTURED, textureId, x, y, 0.0f, 0.0f, width, height, width, height, color);
 		}
 		
 		if (editMode && OverlayRenderer.selectedField == this) {
@@ -136,13 +127,8 @@ public class TextField {
 		}
 	}
 
-	public boolean isMouseOver(double mouseX, double mouseY) { 
-		return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height; 
-	}
-	
-	public boolean isOverResizeCorner(double mouseX, double mouseY) { 
-		return mouseX >= x + width - 8 && mouseX <= x + width && mouseY >= y + height - 8 && mouseY <= y + height; 
-	}
+	public boolean isMouseOver(double mouseX, double mouseY) { return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height; }
+	public boolean isOverResizeCorner(double mouseX, double mouseY) { return mouseX >= x + width - 8 && mouseX <= x + width && mouseY >= y + height - 8 && mouseY <= y + height; }
 
 	public void cleanup() {
 		gifTextureIds = null;
