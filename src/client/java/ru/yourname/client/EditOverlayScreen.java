@@ -78,8 +78,11 @@ public class EditOverlayScreen extends Screen {
 		if (selectedField != null) {
 			if (dragging) { selectedField.x = (int) (mouseX - dragOffsetX); selectedField.y = (int) (mouseY - dragOffsetY); } 
 			else if (resizing) {
-				selectedField.width = Math.max(32, startWidth + (int)(mouseX - startResizeX));
-				selectedField.height = Math.max(32, startHeight + (int)(mouseY - startResizeY));
+				// Убираю минимальное ограничение, чтобы можно было делать области любого размера
+				selectedField.width = Math.max(1, startWidth + (int)(mouseX - startResizeX));
+				selectedField.height = Math.max(1, startHeight + (int)(mouseY - startResizeY));
+				// Отключаю keepAspect при ручном ресайзе
+				selectedField.keepAspect = false;
 			}
 			return true;
 		}
@@ -113,8 +116,8 @@ public class EditOverlayScreen extends Screen {
 		context.fill(5, listTop, 5 + listWidth, listTop + listHeight, 0xDD000000);
 		context.fill(5 + listWidth, listTop, 6 + listWidth, listTop + listHeight, 0xFFFFFFFF);
 		
-		// ИСПРАВЛЕНО: используем drawTextWithShadow для гарантии видимости
-		context.drawTextWithShadow(textRenderer, "Active Fields:", 10, listTop + 5, 0xFFFFAA);
+		// ИСПРАВЛЕНО: полный синтаксис drawText с Text.literal() и явным указанием shadow
+		context.drawText(textRenderer, Text.literal("Active Fields:"), 10, listTop + 5, 0xFFFFFFFF, true);
 		
 		int y = listTop + 20;
 		for (int i = 0; i < OverlayRenderer.fields.size(); i++) {
@@ -126,8 +129,8 @@ public class EditOverlayScreen extends Screen {
 			if (name.contains("\\")) name = name.substring(name.lastIndexOf("\\") + 1);
 			if (name.length() > 15) name = name.substring(0, 12) + "...";
 			
-			int color = (f == selectedField) ? 0x55FF55 : 0xFFFFFF;
-			context.drawTextWithShadow(textRenderer, "📄 " + name, 10, y, color);
+			int color = (f == selectedField) ? 0xFF55FF55 : 0xFFFFFFFF;
+			context.drawText(textRenderer, Text.literal("📄 " + name), 10, y, color, true);
 			y += 14;
 		}
 
@@ -139,7 +142,7 @@ public class EditOverlayScreen extends Screen {
 			if (speedSlider != null && selectedField.isGif) speedSlider.draw(context, mouseX, mouseY, this.width);
 		}
 
-		context.drawCenteredTextWithShadow(this.textRenderer, "EDIT MODE: Drag to move, drag blue corner to resize, DEL to delete, ESC to exit", this.width / 2, 10, 0xFFFF00);
+		context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("EDIT MODE: Drag to move, drag blue corner to resize, DEL to delete, ESC to exit"), this.width / 2, 10, 0xFFFFFF00);
 	}
 
 	@Override
@@ -170,13 +173,12 @@ public class EditOverlayScreen extends Screen {
 			int sliderX = x + (int) (value * (width - 6));
 			context.fill(sliderX, y + 1, sliderX + 6, y + height - 1, 0xFFAAAAAA);
 			
-			// ИСПРАВЛЕНО: используем drawTextWithShadow со String
 			String text = String.format("Alpha: %.0f%%", value * 100);
 			int textX = x + width + 6;
 			if (textX + textRenderer.getWidth(text) > screenWidth - 5) {
 				textX = x - textRenderer.getWidth(text) - 6;
 			}
-			context.drawTextWithShadow(textRenderer, text, textX, y, 0xFFFFFF);
+			context.drawText(textRenderer, Text.literal(text), textX, y, 0xFFFFFFFF, true);
 		}
 
 		boolean isMouseOver(double mx, double my) { return mx >= x && mx <= x + width && my >= y && my <= y + height; }
@@ -212,13 +214,12 @@ public class EditOverlayScreen extends Screen {
 			int sliderX = x + (int) (value * (width - 6));
 			context.fill(sliderX, y + 1, sliderX + 6, y + height - 1, 0xFFAAAAAA);
 			
-			// ИСПРАВЛЕНО: используем drawTextWithShadow со String
 			String text = String.format("Speed: %.1fx", mapLinearToSpeed(value));
 			int textX = x + width + 6;
 			if (textX + textRenderer.getWidth(text) > screenWidth - 5) {
 				textX = x - textRenderer.getWidth(text) - 6;
 			}
-			context.drawTextWithShadow(textRenderer, text, textX, y, 0xFFFFFF);
+			context.drawText(textRenderer, Text.literal(text), textX, y, 0xFFFFFFFF, true);
 		}
 
 		boolean isMouseOver(double mx, double my) { return mx >= x && mx <= x + width && my >= y && my <= y + height; }
