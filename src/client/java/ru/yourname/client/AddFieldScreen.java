@@ -43,9 +43,12 @@ public class AddFieldScreen extends Screen {
 		} else {
 			hintMessage = "";
 			boolean isGif = text.toLowerCase().endsWith(".gif");
-			// Квадратный предпросмотр 120x120 с сохранением пропорций
-			previewField = new TextField(this.width / 2 - 60, this.height / 2 - 60, 120, 120, text, isGif);
-			previewField.keepAspect = true; // Включаем сохранение пропорций
+			// Квадратный предпросмотр 60x60, центрированный в зоне дропа
+			int previewSize = 60;
+			int dropCenterX = this.width / 2;
+			int dropCenterY = this.height / 2 - 35; // Центр зоны дропа
+			previewField = new TextField(dropCenterX - previewSize / 2, dropCenterY - previewSize / 2, previewSize, previewSize, text, isGif);
+			previewField.keepAspect = true;
 		}
 	}
 
@@ -53,7 +56,9 @@ public class AddFieldScreen extends Screen {
 		String source = urlField.getText().trim();
 		if (!source.isEmpty()) {
 			boolean isGif = source.toLowerCase().endsWith(".gif");
-			OverlayRenderer.fields.add(new TextField(50, 50, 128, 128, source, isGif));
+			TextField newField = new TextField(50, 50, 128, 128, source, isGif);
+			newField.keepAspect = true; // ИСПРАВЛЕНО: сохраняем пропорции
+			OverlayRenderer.fields.add(newField);
 			ConfigManager.save(); 
 			close();
 		}
