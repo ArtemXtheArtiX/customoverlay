@@ -21,7 +21,6 @@ public class EditOverlayScreen extends Screen {
 		double mouseX = click.x();
 		double mouseY = click.y();
 
-		// 1. Проверка клика по списку слева
 		int listWidth = 140, listHeight = this.height / 2, listTop = 20;
 		if (mouseX >= 5 && mouseX <= 5 + listWidth && mouseY >= listTop && mouseY <= listTop + listHeight) {
 			int idx = (int)((mouseY - (listTop + 20)) / 14);
@@ -37,7 +36,6 @@ public class EditOverlayScreen extends Screen {
 			}
 		}
 
-		// 2. Проверка слайдеров
 		if (selectedField != null) {
 			if (alphaSlider != null && alphaSlider.isMouseOver(mouseX, mouseY)) {
 				alphaSlider.mousePressed(mouseX, mouseY); return true;
@@ -47,7 +45,6 @@ public class EditOverlayScreen extends Screen {
 			}
 		}
 
-		// 3. Проверка полей
 		if (click.button() == 0) {
 			for (int i = OverlayRenderer.fields.size() - 1; i >= 0; i--) {
 				TextField f = OverlayRenderer.fields.get(i);
@@ -112,12 +109,12 @@ public class EditOverlayScreen extends Screen {
 		super.render(context, mouseX, mouseY, delta);
 		for (TextField f : OverlayRenderer.fields) f.render(context, true);
 
-		// --- Отрисовка списка слева ---
 		int listWidth = 140, listHeight = this.height / 2, listTop = 20;
 		context.fill(5, listTop, 5 + listWidth, listTop + listHeight, 0xDD000000);
 		context.fill(5 + listWidth, listTop, 6 + listWidth, listTop + listHeight, 0xFFFFFFFF);
 		
-		context.drawText(textRenderer, "Active Fields:", 10, listTop + 5, 0xFFFFAA, true);
+		// ИСПРАВЛЕНО: используем Text.literal() вместо String
+		context.drawText(textRenderer, Text.literal("Active Fields:"), 10, listTop + 5, 0xFFFFAA, true);
 		
 		int y = listTop + 20;
 		for (int i = 0; i < OverlayRenderer.fields.size(); i++) {
@@ -130,11 +127,10 @@ public class EditOverlayScreen extends Screen {
 			if (name.length() > 15) name = name.substring(0, 12) + "...";
 			
 			int color = (f == selectedField) ? 0x55FF55 : 0xFFFFFF;
-			context.drawText(textRenderer, "📄 " + name, 10, y, color, true);
+			context.drawText(textRenderer, Text.literal("📄 " + name), 10, y, color, true);
 			y += 14;
 		}
 
-		// --- Отрисовка слайдеров со значениями ---
 		if (selectedField != null) {
 			if (alphaSlider == null) alphaSlider = new AlphaSlider(0, 0, selectedField.alpha);
 			if (speedSlider == null && selectedField.isGif) speedSlider = new SpeedSlider(0, 0, selectedField.speed);
@@ -158,7 +154,6 @@ public class EditOverlayScreen extends Screen {
 		return super.keyPressed(input);
 	}
 
-	// --- Встроенные классы слайдеров ---
 	private class AlphaSlider {
 		int x, y, width = 100, height = 10; 
 		float value; 
@@ -175,13 +170,13 @@ public class EditOverlayScreen extends Screen {
 			int sliderX = x + (int) (value * (width - 6));
 			context.fill(sliderX, y + 1, sliderX + 6, y + height - 1, 0xFFAAAAAA);
 			
-			// ГАРАНТИРОВАННЫЙ вывод значения
+			// ИСПРАВЛЕНО: используем Text.literal()
 			String text = String.format("Alpha: %.0f%%", value * 100);
 			int textX = x + width + 6;
 			if (textX + textRenderer.getWidth(text) > screenWidth - 5) {
-				textX = x - textRenderer.getWidth(text) - 6; // Если не влезает справа, рисуем слева
+				textX = x - textRenderer.getWidth(text) - 6;
 			}
-			context.drawText(textRenderer, text, textX, y, 0xFFFFFF, true);
+			context.drawText(textRenderer, Text.literal(text), textX, y, 0xFFFFFF, true);
 		}
 
 		boolean isMouseOver(double mx, double my) { return mx >= x && mx <= x + width && my >= y && my <= y + height; }
@@ -217,13 +212,13 @@ public class EditOverlayScreen extends Screen {
 			int sliderX = x + (int) (value * (width - 6));
 			context.fill(sliderX, y + 1, sliderX + 6, y + height - 1, 0xFFAAAAAA);
 			
-			// ГАРАНТИРОВАННЫЙ вывод значения
+			// ИСПРАВЛЕНО: используем Text.literal()
 			String text = String.format("Speed: %.1fx", mapLinearToSpeed(value));
 			int textX = x + width + 6;
 			if (textX + textRenderer.getWidth(text) > screenWidth - 5) {
-				textX = x - textRenderer.getWidth(text) - 6; // Если не влезает справа, рисуем слева
+				textX = x - textRenderer.getWidth(text) - 6;
 			}
-			context.drawText(textRenderer, text, textX, y, 0xFFFFFF, true);
+			context.drawText(textRenderer, Text.literal(text), textX, y, 0xFFFFFF, true);
 		}
 
 		boolean isMouseOver(double mx, double my) { return mx >= x && mx <= x + width && my >= y && my <= y + height; }
