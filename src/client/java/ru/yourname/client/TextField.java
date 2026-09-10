@@ -67,6 +67,11 @@ public class TextField {
 			NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "customoverlay", finalImg);
 			textureId = Identifier.of("customoverlay", "static_" + imageUrlOrPath.hashCode());
 			MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, tex);
+			
+			// Автоматическая подстройка размеров под пропорции
+			if (keepAspect && originalWidth > 0 && originalHeight > 0) {
+				adjustSizeToAspect();
+			}
 		});
 	}
 
@@ -108,7 +113,23 @@ public class TextField {
 				}
 			}
 			reader.dispose();
+			
+			// Автоматическая подстройка размеров под пропорции
+			if (keepAspect && originalWidth > 0 && originalHeight > 0) {
+				adjustSizeToAspect();
+			}
 		});
+	}
+
+	private void adjustSizeToAspect() {
+		float aspect = (float) originalWidth / originalHeight;
+		if (aspect > 1) {
+			// Горизонтальное изображение
+			height = (int) (width / aspect);
+		} else {
+			// Вертикальное изображение
+			width = (int) (height * aspect);
+		}
 	}
 
 	private NativeImage resizeImage(NativeImage img, int maxW, int maxH) {
@@ -135,15 +156,6 @@ public class TextField {
 		
 		int color = ((int)(this.alpha * 255) << 24) | 0x00FFFFFF;
 
-		int drawW = width, drawH = height;
-		if (keepAspect && originalWidth > 0 && originalHeight > 0) {
-			float scaleX = (float) width / originalWidth;
-			float scaleY = (float) height / originalHeight;
-			float scale = Math.min(scaleX, scaleY);
-			drawW = (int) (originalWidth * scale);
-			drawH = (int) (originalHeight * scale);
-		}
-
 		if (isGif && gifTextureIds != null && !gifTextureIds.isEmpty()) {
 			long now = System.currentTimeMillis();
 			if (now - lastFrameTime >= (frameDelays.get(currentFrame) / speed)) {
@@ -151,9 +163,9 @@ public class TextField {
 				lastFrameTime = now;
 			}
 			Identifier currentId = gifTextureIds.get(currentFrame);
-			context.drawTexture(RenderPipelines.GUI_TEXTURED, currentId, x, y, 0.0f, 0.0f, drawW, drawH, drawW, drawH, color);
+			context.drawTexture(RenderPipelines.GUI_TEXTURED, currentId, x, y, 0.0f, 0.0f, width, height, width, height, color);
 		} else if (textureId != null) {
-			context.drawTexture(RenderPipelines.GUI_TEXTURED, textureId, x, y, 0.0f, 0.0f, drawW, drawH, drawW, drawH, color);
+			context.drawTexture(RenderPipelines.GUI_TEXTURED, textureId, x, y, 0.0f, 0.0f, width, height, width, height, color);
 		}
 		
 		if (editMode && OverlayRenderer.selectedField == this) {
