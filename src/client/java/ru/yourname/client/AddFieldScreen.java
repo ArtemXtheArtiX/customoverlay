@@ -12,7 +12,8 @@ import java.util.List;
 
 public class AddFieldScreen extends Screen {
 	private TextFieldWidget urlField;
-	private String previewText = "Drag & Drop file here\nor paste URL/path (Ctrl+V)";
+	private TextField previewField; // Для предпросмотра
+	private String hintMessage = "Drag & Drop file here!\n(or paste URL/path)";
 
 	public AddFieldScreen() { 
 		super(Text.literal("Add Overlay Field")); 
@@ -32,20 +33,18 @@ public class AddFieldScreen extends Screen {
 	}
 
 	private void onUrlChanged(String text) {
+		if (previewField != null) {
+			previewField.cleanup();
+			previewField = null;
+		}
+
 		if (text.trim().isEmpty()) {
-			previewText = "Drag & Drop file here\nor paste URL/path (Ctrl+V)";
+			hintMessage = "Drag & Drop file here!\n(or paste URL/path)";
 		} else {
-			String lower = text.toLowerCase();
-			String type = "Image";
-			if (lower.endsWith(".gif")) type = "GIF Animation";
-			else if (lower.endsWith(".webp")) type = "WebP Image";
-			
-			String name = text;
-			if (name.contains("/")) name = name.substring(name.lastIndexOf("/") + 1);
-			if (name.contains("\\")) name = name.substring(name.lastIndexOf("\\") + 1);
-			if (name.length() > 22) name = name.substring(0, 19) + "...";
-			
-			previewText = "Ready to add:\n§f" + name + "\n§7(" + type + ")";
+			hintMessage = ""; // Скрываем текст, если есть предпросмотр
+			boolean isGif = text.toLowerCase().endsWith(".gif");
+			// Создаём миниатюру для предпросмотра прямо в зоне дропа
+			previewField = new TextField(this.width / 2 - 90, this.height / 2 - 60, 180, 50, text, isGif);
 		}
 	}
 
@@ -59,7 +58,6 @@ public class AddFieldScreen extends Screen {
 		}
 	}
 
-	// ИСПРАВЛЕНО: правильное имя метода onFilesDropped и возврат void
 	@Override
 	public void onFilesDropped(List<Path> paths) {
 		if (paths != null && !paths.isEmpty()) {
@@ -68,14 +66,20 @@ public class AddFieldScreen extends Screen {
 			
 			if (fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
 			    fileName.endsWith(".gif") || fileName.endsWith(".webp")) {
-				// Используем абсолютный путь, чтобы Minecraft точно нашёл файл
 				String filePath = path.toAbsolutePath().toString().replace("\\", "/");
 				urlField.setText(filePath);
 				onUrlChanged(filePath);
 			} else {
-				previewText = "§cUnsupported file type!\n§7Only images and GIFs";
+				hintMessage = "§cUnsupported file type!\n§7Only images and GIFs";
+				if (previewField != null) { previewField.cleanup(); previewField = null; }
 			}
 		}
+	}
+
+	@Override
+	public void removed() {
+		if (previewField != null) previewField.cleanup();
+		super.removed();
 	}
 
 	@Override
@@ -85,25 +89,33 @@ public class AddFieldScreen extends Screen {
 		
 		context.drawCenteredTextWithShadow(this.textRenderer, "Add New Overlay", this.width / 2, this.height / 2 - 90, 0xFFFFFF);
 
-		// Область Drag & Drop / Предпросмотра
+		// --- Область Drag & Drop / Предпросмотра ---
 		int dropX = this.width / 2 - 100;
 		int dropY = this.height / 2 - 70;
 		int dropW = 200;
 		int dropH = 70;
 		
-		context.fill(dropX, dropY, dropX + dropW, dropY + dropH, 0x40888888);
+		// Фон зоны
+		context.fill(dropX, dropY, dropX + dropW, dropY + dropH, 0x30888888);
 		
-		int borderColor = 0xFFAAAAAA;
-		context.fill(dropX, dropY, dropX + dropW, dropY + 1, borderColor);
-		context.fill(dropX, dropY + dropH - 1, dropX + dropW, dropY + dropH, borderColor);
-		context.fill(dropX, dropY, dropX + 1, dropY + dropH, borderColor);
-		context.fill(dropX + dropW - 1, dropY, dropX + dropW, dropY + dropH, borderColor);
+		// Яркая рамка, чтобы было очевидно, что сюда можно кидать
+		int borderColor = 0xFF55FF55; // Зелёная рамка
+		context.fill(dropX, dropY, dropX + dropW, dropY + 2, borderColor);
+		context.fill(dropX, dropY + dropH - 2, dropX + dropW, dropY + dropH, borderColor);
+		context.fill(dropX, dropY, dropX + 2, dropY + dropH, borderColor);
+		context.fill(dropX + dropW - 2, dropY, dropX + dropW, dropY + dropH, borderColor);
 
-		String[] lines = previewText.split("\n");
-		int textY = dropY + (dropH / 2) - ((lines.length * 10) / 2) + 2;
-		for (String line : lines) {
-			context.drawCenteredTextWithShadow(this.textRenderer, line, this.width / 2, textY, 0xFFFFFF);
-			textY += 12;
+		if (previewField != null) {
+			// Рендерим реальное изображение/гифку
+			previewField.render(context, false);
+		} else {
+			// Рендерим текст-подсказку
+			String[] lines = hintMessage.split("\n");
+			int textY = dropY + (dropH / 2) - ((lines.length * 10) / 2) + 2;
+			for (String line : lines) {
+				context.drawCenteredTextWithShadow(this.textRenderer, line, this.width / 2, textY, 0xFFFFFF);
+				textY += 12;
+			}
 		}
 
 		urlField.render(context, mouseX, mouseY, delta);
