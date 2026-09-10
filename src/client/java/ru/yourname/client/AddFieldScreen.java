@@ -59,9 +59,9 @@ public class AddFieldScreen extends Screen {
 		}
 	}
 
-	// ИСПРАВЛЕНО: возвращает boolean, как того требует Screen в 1.21+
+	// ИСПРАВЛЕНО: правильное имя метода onFilesDropped и возврат void
 	@Override
-	public boolean filesDropped(List<Path> paths) {
+	public void onFilesDropped(List<Path> paths) {
 		if (paths != null && !paths.isEmpty()) {
 			Path path = paths.get(0);
 			String fileName = path.getFileName().toString().toLowerCase();
@@ -72,13 +72,10 @@ public class AddFieldScreen extends Screen {
 				String filePath = path.toAbsolutePath().toString().replace("\\", "/");
 				urlField.setText(filePath);
 				onUrlChanged(filePath);
-				return true;
 			} else {
 				previewText = "§cUnsupported file type!\n§7Only images and GIFs";
-				return true;
 			}
 		}
-		return super.filesDropped(paths);
 	}
 
 	@Override
