@@ -12,7 +12,7 @@ import java.util.List;
 
 public class AddFieldScreen extends Screen {
 	private TextFieldWidget urlField;
-	private TextField previewField; // Для предпросмотра
+	private TextField previewField;
 	private String hintMessage = "Drag & Drop file here!\n(or paste URL/path)";
 
 	public AddFieldScreen() { 
@@ -41,10 +41,11 @@ public class AddFieldScreen extends Screen {
 		if (text.trim().isEmpty()) {
 			hintMessage = "Drag & Drop file here!\n(or paste URL/path)";
 		} else {
-			hintMessage = ""; // Скрываем текст, если есть предпросмотр
+			hintMessage = "";
 			boolean isGif = text.toLowerCase().endsWith(".gif");
-			// Создаём миниатюру для предпросмотра прямо в зоне дропа
-			previewField = new TextField(this.width / 2 - 90, this.height / 2 - 60, 180, 50, text, isGif);
+			// Квадратный предпросмотр 120x120 с сохранением пропорций
+			previewField = new TextField(this.width / 2 - 60, this.height / 2 - 60, 120, 120, text, isGif);
+			previewField.keepAspect = true; // Включаем сохранение пропорций
 		}
 	}
 
@@ -89,27 +90,22 @@ public class AddFieldScreen extends Screen {
 		
 		context.drawCenteredTextWithShadow(this.textRenderer, "Add New Overlay", this.width / 2, this.height / 2 - 90, 0xFFFFFF);
 
-		// --- Область Drag & Drop / Предпросмотра ---
 		int dropX = this.width / 2 - 100;
 		int dropY = this.height / 2 - 70;
 		int dropW = 200;
 		int dropH = 70;
 		
-		// Фон зоны
 		context.fill(dropX, dropY, dropX + dropW, dropY + dropH, 0x30888888);
 		
-		// Яркая рамка, чтобы было очевидно, что сюда можно кидать
-		int borderColor = 0xFF55FF55; // Зелёная рамка
+		int borderColor = 0xFF55FF55;
 		context.fill(dropX, dropY, dropX + dropW, dropY + 2, borderColor);
 		context.fill(dropX, dropY + dropH - 2, dropX + dropW, dropY + dropH, borderColor);
 		context.fill(dropX, dropY, dropX + 2, dropY + dropH, borderColor);
 		context.fill(dropX + dropW - 2, dropY, dropX + dropW, dropY + dropH, borderColor);
 
 		if (previewField != null) {
-			// Рендерим реальное изображение/гифку
 			previewField.render(context, false);
 		} else {
-			// Рендерим текст-подсказку
 			String[] lines = hintMessage.split("\n");
 			int textY = dropY + (dropH / 2) - ((lines.length * 10) / 2) + 2;
 			for (String line : lines) {
