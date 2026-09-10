@@ -120,9 +120,10 @@ public class TextField {
 		} else if (textureId != null) {
 			context.drawTexture(RenderPipelines.GUI_TEXTURED, textureId, x, y, 0.0f, 0.0f, width, height, width, height, color);
 		}
-		
-		if (editMode && OverlayRenderer.selectedField == this) {
-			context.fill(x - 2, y - 2, x + width + 2, y + height + 2, 0x80FFFF00);
+			if (editMode && OverlayRenderer.selectedField == this) {
+			// Жёлтая обводка вместо заливки
+			context.drawBorder(x - 2, y - 2, width + 4, height + 4, 0xFFFFFF00);
+			// Синий квадрат для ресайза оставляем залитым, так как он маленький
 			context.fill(x + width - 8, y + height - 8, x + width, y + height, 0xFF0088FF);
 		}
 	}
