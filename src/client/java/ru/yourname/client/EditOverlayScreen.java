@@ -112,11 +112,9 @@ public class EditOverlayScreen extends Screen {
 		super.render(context, mouseX, mouseY, delta);
 		for (TextField f : OverlayRenderer.fields) f.render(context, true);
 
-		// --- Отрисовка списка слева (ИСПРАВЛЕНО) ---
+		// --- Отрисовка списка слева ---
 		int listWidth = 140, listHeight = this.height / 2, listTop = 20;
-		// Чуть светлее фон, чтобы текст читался лучше
 		context.fill(5, listTop, 5 + listWidth, listTop + listHeight, 0xDD000000);
-		// Разделительная линия справа от списка
 		context.fill(5 + listWidth, listTop, 6 + listWidth, listTop + listHeight, 0xFFFFFFFF);
 		
 		context.drawText(textRenderer, "Active Fields:", 10, listTop + 5, 0xFFFFAA, true);
@@ -126,19 +124,17 @@ public class EditOverlayScreen extends Screen {
 			if (y + 14 > listTop + listHeight) break;
 			TextField f = OverlayRenderer.fields.get(i);
 			
-			// Берём только имя файла из пути
 			String name = f.imageUrlOrPath;
 			if (name.contains("/")) name = name.substring(name.lastIndexOf("/") + 1);
 			if (name.contains("\\")) name = name.substring(name.lastIndexOf("\\") + 1);
 			if (name.length() > 15) name = name.substring(0, 12) + "...";
 			
-			// Ярко-зелёный для выбранного, белый для остальных
 			int color = (f == selectedField) ? 0x55FF55 : 0xFFFFFF;
 			context.drawText(textRenderer, "📄 " + name, 10, y, color, true);
 			y += 14;
 		}
 
-		// Отрисовка слайдеров
+		// --- Отрисовка слайдеров со значениями ---
 		if (selectedField != null) {
 			if (alphaSlider == null) alphaSlider = new AlphaSlider(0, 0, selectedField.alpha);
 			if (speedSlider == null && selectedField.isGif) speedSlider = new SpeedSlider(0, 0, selectedField.speed);
@@ -162,48 +158,79 @@ public class EditOverlayScreen extends Screen {
 		return super.keyPressed(input);
 	}
 
+	// --- Встроенные классы слайдеров ---
 	private class AlphaSlider {
-		int x, y, width = 100, height = 10; float value; boolean dragging;
-		AlphaSlider(int x, int y, float initial) { this.x = x; this.y = y; this.value = Math.max(0f, Math.min(1f, initial)); }
+		int x, y, width = 100, height = 10; 
+		float value; 
+		boolean dragging;
+
+		AlphaSlider(int x, int y, float initial) { 
+			this.x = x; this.y = y; 
+			this.value = Math.max(0f, Math.min(1f, initial)); 
+		}
+
 		void draw(DrawContext context, int mouseX, int mouseY, int screenWidth) {
 			context.fill(x, y, x + width, y + height, 0xFF888888);
 			context.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFF444444);
 			int sliderX = x + (int) (value * (width - 6));
 			context.fill(sliderX, y + 1, sliderX + 6, y + height - 1, 0xFFAAAAAA);
+			
+			// ГАРАНТИРОВАННЫЙ вывод значения
 			String text = String.format("Alpha: %.0f%%", value * 100);
-			int textWidth = textRenderer.getWidth(text);
-			int textX = (x + width + 5 + textWidth < screenWidth - 10) ? (x + width + 5) : (x - textWidth - 5);
+			int textX = x + width + 6;
+			if (textX + textRenderer.getWidth(text) > screenWidth - 5) {
+				textX = x - textRenderer.getWidth(text) - 6; // Если не влезает справа, рисуем слева
+			}
 			context.drawText(textRenderer, text, textX, y, 0xFFFFFF, true);
 		}
+
 		boolean isMouseOver(double mx, double my) { return mx >= x && mx <= x + width && my >= y && my <= y + height; }
 		void mousePressed(double mx, double my) { dragging = true; updateValue(mx); }
 		void mouseDragged(double mx, double my) { if (dragging) updateValue(mx); }
 		void mouseReleased() { dragging = false; }
+		
 		private void updateValue(double mx) {
 			float newValue = Math.max(0f, Math.min(1f, (float) (mx - x) / width));
-			if (value != newValue) { value = newValue; if (selectedField != null) selectedField.alpha = value; }
+			if (value != newValue) { 
+				value = newValue; 
+				if (selectedField != null) selectedField.alpha = value; 
+			}
 		}
 	}
 
 	private class SpeedSlider {
-		int x, y, width = 100, height = 10; float value; boolean dragging;
-		SpeedSlider(int x, int y, float initialSpeed) { this.x = x; this.y = y; this.value = mapSpeedToLinear(initialSpeed); }
+		int x, y, width = 100, height = 10; 
+		float value; 
+		boolean dragging;
+
+		SpeedSlider(int x, int y, float initialSpeed) { 
+			this.x = x; this.y = y; 
+			this.value = mapSpeedToLinear(initialSpeed); 
+		}
+
 		private float mapSpeedToLinear(float speed) { return (speed - 0.5f) / 1.5f; }
 		private float mapLinearToSpeed(float linear) { return 0.5f + linear * 1.5f; }
+
 		void draw(DrawContext context, int mouseX, int mouseY, int screenWidth) {
 			context.fill(x, y, x + width, y + height, 0xFF888888);
 			context.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFF444444);
 			int sliderX = x + (int) (value * (width - 6));
 			context.fill(sliderX, y + 1, sliderX + 6, y + height - 1, 0xFFAAAAAA);
+			
+			// ГАРАНТИРОВАННЫЙ вывод значения
 			String text = String.format("Speed: %.1fx", mapLinearToSpeed(value));
-			int textWidth = textRenderer.getWidth(text);
-			int textX = (x + width + 5 + textWidth < screenWidth - 10) ? (x + width + 5) : (x - textWidth - 5);
+			int textX = x + width + 6;
+			if (textX + textRenderer.getWidth(text) > screenWidth - 5) {
+				textX = x - textRenderer.getWidth(text) - 6; // Если не влезает справа, рисуем слева
+			}
 			context.drawText(textRenderer, text, textX, y, 0xFFFFFF, true);
 		}
+
 		boolean isMouseOver(double mx, double my) { return mx >= x && mx <= x + width && my >= y && my <= y + height; }
 		void mousePressed(double mx, double my) { dragging = true; updateValue(mx); }
 		void mouseDragged(double mx, double my) { if (dragging) updateValue(mx); }
 		void mouseReleased() { dragging = false; }
+		
 		private void updateValue(double mx) {
 			float newLinear = Math.max(0f, Math.min(1f, (float) (mx - x) / width));
 			if (value != newLinear) {
