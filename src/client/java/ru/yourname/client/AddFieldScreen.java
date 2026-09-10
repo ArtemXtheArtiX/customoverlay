@@ -33,7 +33,9 @@ public class AddFieldScreen extends Screen {
 
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		this.renderBackground(context, mouseX, mouseY, delta);
+		// ИСПРАВЛЕНИЕ: Рисуем полупрозрачный фон вручную, чтобы избежать краша "Can only blur once per frame"
+		context.fill(0, 0, this.width, this.height, 0x60000000);
+		
 		super.render(context, mouseX, mouseY, delta);
 		context.drawCenteredTextWithShadow(this.textRenderer, "Enter URL or local file path:", this.width / 2, this.height / 2 - 50, 0xFFFFFF);
 		urlField.render(context, mouseX, mouseY, delta);
@@ -41,7 +43,6 @@ public class AddFieldScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyInput input) {
-		// ИСПРАВЛЕНО: input.key() возвращает int напрямую
 		if (input.key() == 256) { close(); return true; }
 		return super.keyPressed(input);
 	}
