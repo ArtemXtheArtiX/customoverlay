@@ -7,6 +7,7 @@ import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.util.Identifier;
 import ru.yourname.Customoverlay;
+
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
@@ -100,10 +101,17 @@ public class TextField {
 	}
 
 	private NativeImage resizeImage(NativeImage img, int maxW, int maxH) {
-		float scale = Math.min((float) maxW / img.getWidth(), (float) maxH / img.getHeight());
+		// Вычисляем масштаб так, чтобы изображение вписалось в maxW x maxH, сохраняя пропорции
+		float scaleX = (float) maxW / img.getWidth();
+		float scaleY = (float) maxH / img.getHeight();
+		float scale = Math.min(scaleX, scaleY);
+		
 		if (scale >= 1.0f) return img;
-		int newW = (int) (img.getWidth() * scale), newH = (int) (img.getHeight() * scale);
+		
+		int newW = (int) (img.getWidth() * scale);
+		int newH = (int) (img.getHeight() * scale);
 		NativeImage resized = new NativeImage(NativeImage.Format.RGBA, newW, newH, false);
+		
 		for (int y = 0; y < newH; y++) {
 			for (int x = 0; x < newW; x++) {
 				resized.setColorArgb(x, y, img.getColorArgb((int)(x / scale), (int)(y / scale)));
@@ -115,7 +123,7 @@ public class TextField {
 	public void render(DrawContext context, boolean editMode) {
 		if (!isLoaded) return;
 		
-		// Вычисляем цвет с учётом прозрачности
+		// Вычисляем цвет с учётом прозрачности (ARGB)
 		int color = ((int)(this.alpha * 255) << 24) | 0x00FFFFFF;
 
 		if (isGif && gifTextureIds != null && !gifTextureIds.isEmpty()) {
@@ -131,7 +139,7 @@ public class TextField {
 		}
 		
 		if (editMode && OverlayRenderer.selectedField == this) {
-			// Рисуем жёлтую обводку вручную (4 линии), так как drawBorder отсутствует в 1.21.11
+			// Рисуем жёлтую обводку вручную (4 линии)
 			int bx = x - 2, by = y - 2, bw = width + 4, bh = height + 4;
 			int c = 0xFFFFFF00;
 			context.fill(bx, by, bx + bw, by + 1, c);
