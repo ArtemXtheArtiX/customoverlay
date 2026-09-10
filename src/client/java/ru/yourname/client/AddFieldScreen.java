@@ -43,10 +43,9 @@ public class AddFieldScreen extends Screen {
 		} else {
 			hintMessage = "";
 			boolean isGif = text.toLowerCase().endsWith(".gif");
-			// Квадратный предпросмотр 60x60, центрированный в зоне дропа
 			int previewSize = 60;
 			int dropCenterX = this.width / 2;
-			int dropCenterY = this.height / 2 - 35; // Центр зоны дропа
+			int dropCenterY = this.height / 2 - 35;
 			previewField = new TextField(dropCenterX - previewSize / 2, dropCenterY - previewSize / 2, previewSize, previewSize, text, isGif);
 			previewField.keepAspect = true;
 		}
@@ -57,7 +56,7 @@ public class AddFieldScreen extends Screen {
 		if (!source.isEmpty()) {
 			boolean isGif = source.toLowerCase().endsWith(".gif");
 			TextField newField = new TextField(50, 50, 128, 128, source, isGif);
-			newField.keepAspect = true; // ИСПРАВЛЕНО: сохраняем пропорции
+			newField.keepAspect = true;
 			OverlayRenderer.fields.add(newField);
 			ConfigManager.save(); 
 			close();
@@ -93,7 +92,7 @@ public class AddFieldScreen extends Screen {
 		context.fill(0, 0, this.width, this.height, 0x60000000);
 		super.render(context, mouseX, mouseY, delta);
 		
-		context.drawCenteredTextWithShadow(this.textRenderer, "Add New Overlay", this.width / 2, this.height / 2 - 90, 0xFFFFFF);
+		context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("Add New Overlay"), this.width / 2, this.height / 2 - 90, 0xFFFFFFFF);
 
 		int dropX = this.width / 2 - 100;
 		int dropY = this.height / 2 - 70;
@@ -114,7 +113,7 @@ public class AddFieldScreen extends Screen {
 			String[] lines = hintMessage.split("\n");
 			int textY = dropY + (dropH / 2) - ((lines.length * 10) / 2) + 2;
 			for (String line : lines) {
-				context.drawCenteredTextWithShadow(this.textRenderer, line, this.width / 2, textY, 0xFFFFFF);
+				context.drawCenteredTextWithShadow(this.textRenderer, Text.literal(line), this.width / 2, textY, 0xFFFFFFFF);
 				textY += 12;
 			}
 		}
