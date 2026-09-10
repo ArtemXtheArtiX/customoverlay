@@ -22,13 +22,13 @@ public class EditOverlayScreen extends Screen {
 		double mouseY = click.y();
 
 		// 1. Проверка клика по списку слева
-		int listWidth = 120, listHeight = this.height / 2, listTop = 20;
+		int listWidth = 130, listHeight = this.height / 2, listTop = 20;
 		if (mouseX >= 5 && mouseX <= 5 + listWidth && mouseY >= listTop && mouseY <= listTop + listHeight) {
 			int idx = (int)((mouseY - (listTop + 20)) / 14);
 			if (idx >= 0 && idx < OverlayRenderer.fields.size()) {
 				selectedField = OverlayRenderer.fields.get(idx);
 				OverlayRenderer.selectedField = selectedField;
-				alphaSlider = null; speedSlider = null; // Сброс для пересоздания
+				alphaSlider = null; speedSlider = null;
 				return true;
 			} else {
 				selectedField = null; OverlayRenderer.selectedField = null;
@@ -112,10 +112,10 @@ public class EditOverlayScreen extends Screen {
 		super.render(context, mouseX, mouseY, delta);
 		for (TextField f : OverlayRenderer.fields) f.render(context, true);
 
-		// Отрисовка списка слева
-		int listWidth = 120, listHeight = this.height / 2, listTop = 20;
+		// Отрисовка списка слева (ИСПРАВЛЕНИЕ 2: яркий цвет и тень)
+		int listWidth = 130, listHeight = this.height / 2, listTop = 20;
 		context.fill(5, listTop, 5 + listWidth, listTop + listHeight, 0xCC000000);
-		context.drawText(textRenderer, "Fields:", 10, listTop + 5, 0xFFFFFF, false);
+		context.drawText(textRenderer, "Fields:", 10, listTop + 5, 0xFFFFFF, true);
 		int y = listTop + 20;
 		for (int i = 0; i < OverlayRenderer.fields.size(); i++) {
 			if (y + 12 > listTop + listHeight) break;
@@ -123,18 +123,20 @@ public class EditOverlayScreen extends Screen {
 			String name = f.imageUrlOrPath;
 			if (name.contains("/")) name = name.substring(name.lastIndexOf("/") + 1);
 			if (name.length() > 14) name = name.substring(0, 11) + "...";
-			int color = (f == selectedField) ? 0xFFFFAA : 0xCCCCCC;
-			context.drawText(textRenderer, name, 10, y, color, false);
+			
+			// Белый для обычных, ярко-жёлтый для выбранного
+			int color = (f == selectedField) ? 0xFFFF55 : 0xFFFFFF;
+			context.drawText(textRenderer, name, 10, y, color, true); // true = shadow
 			y += 14;
 		}
 
-		// Отрисовка слайдеров
+		// Отрисовка слайдеров (ИСПРАВЛЕНИЕ 3: адаптивный текст)
 		if (selectedField != null) {
 			if (alphaSlider == null) alphaSlider = new AlphaSlider(0, 0, selectedField.alpha);
 			if (speedSlider == null && selectedField.isGif) speedSlider = new SpeedSlider(0, 0, selectedField.speed);
 			updateSliderPositions();
-			alphaSlider.draw(context, mouseX, mouseY);
-			if (speedSlider != null && selectedField.isGif) speedSlider.draw(context, mouseX, mouseY);
+			alphaSlider.draw(context, mouseX, mouseY, this.width);
+			if (speedSlider != null && selectedField.isGif) speedSlider.draw(context, mouseX, mouseY, this.width);
 		}
 
 		context.drawCenteredTextWithShadow(this.textRenderer, "EDIT MODE: Drag to move, drag blue corner to resize, DEL to delete, ESC to exit", this.width / 2, 10, 0xFFFF00);
@@ -155,13 +157,20 @@ public class EditOverlayScreen extends Screen {
 	private class AlphaSlider {
 		int x, y, width = 100, height = 10; float value; boolean dragging;
 		AlphaSlider(int x, int y, float initial) { this.x = x; this.y = y; this.value = Math.max(0f, Math.min(1f, initial)); }
-		void draw(DrawContext context, int mouseX, int mouseY) {
+		
+		void draw(DrawContext context, int mouseX, int mouseY, int screenWidth) {
 			context.fill(x, y, x + width, y + height, 0xFF888888);
 			context.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFF444444);
 			int sliderX = x + (int) (value * (width - 6));
 			context.fill(sliderX, y + 1, sliderX + 6, y + height - 1, 0xFFAAAAAA);
-			context.drawText(textRenderer, String.format("Alpha: %.0f%%", value * 100), x + width + 5, y, 0xFFFFFF, false);
+			
+			String text = String.format("Alpha: %.0f%%", value * 100);
+			int textWidth = textRenderer.getWidth(text);
+			// Если справа не хватает места, рисуем слева
+			int textX = (x + width + 5 + textWidth < screenWidth - 10) ? (x + width + 5) : (x - textWidth - 5);
+			context.drawText(textRenderer, text, textX, y, 0xFFFFFF, true);
 		}
+		
 		boolean isMouseOver(double mx, double my) { return mx >= x && mx <= x + width && my >= y && my <= y + height; }
 		void mousePressed(double mx, double my) { dragging = true; updateValue(mx); }
 		void mouseDragged(double mx, double my) { if (dragging) updateValue(mx); }
@@ -177,13 +186,19 @@ public class EditOverlayScreen extends Screen {
 		SpeedSlider(int x, int y, float initialSpeed) { this.x = x; this.y = y; this.value = mapSpeedToLinear(initialSpeed); }
 		private float mapSpeedToLinear(float speed) { return (speed - 0.5f) / 1.5f; }
 		private float mapLinearToSpeed(float linear) { return 0.5f + linear * 1.5f; }
-		void draw(DrawContext context, int mouseX, int mouseY) {
+		
+		void draw(DrawContext context, int mouseX, int mouseY, int screenWidth) {
 			context.fill(x, y, x + width, y + height, 0xFF888888);
 			context.fill(x + 1, y + 1, x + width - 1, y + height - 1, 0xFF444444);
 			int sliderX = x + (int) (value * (width - 6));
 			context.fill(sliderX, y + 1, sliderX + 6, y + height - 1, 0xFFAAAAAA);
-			context.drawText(textRenderer, String.format("Speed: %.1fx", mapLinearToSpeed(value)), x + width + 5, y, 0xFFFFFF, false);
+			
+			String text = String.format("Speed: %.1fx", mapLinearToSpeed(value));
+			int textWidth = textRenderer.getWidth(text);
+			int textX = (x + width + 5 + textWidth < screenWidth - 10) ? (x + width + 5) : (x - textWidth - 5);
+			context.drawText(textRenderer, text, textX, y, 0xFFFFFF, true);
 		}
+		
 		boolean isMouseOver(double mx, double my) { return mx >= x && mx <= x + width && my >= y && my <= y + height; }
 		void mousePressed(double mx, double my) { dragging = true; updateValue(mx); }
 		void mouseDragged(double mx, double my) { if (dragging) updateValue(mx); }
