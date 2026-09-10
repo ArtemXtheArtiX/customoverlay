@@ -6,14 +6,13 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
-import ru.yourname.Customoverlay;
 
 import java.nio.file.Path;
 import java.util.List;
 
 public class AddFieldScreen extends Screen {
 	private TextFieldWidget urlField;
-	private String previewText = "Drag & Drop file here\nor type URL/path";
+	private String previewText = "Drag & Drop file here\nor paste URL/path (Ctrl+V)";
 
 	public AddFieldScreen() { 
 		super(Text.literal("Add Overlay Field")); 
@@ -21,14 +20,12 @@ public class AddFieldScreen extends Screen {
 
 	@Override
 	protected void init() {
-		// Поле ввода
 		urlField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, this.height / 2 + 20, 200, 20, Text.literal("URL or File Path"));
 		urlField.setMaxLength(256);
-		urlField.setChangedListener(this::onUrlChanged); // Обновляем предпросмотр при вводе
+		urlField.setChangedListener(this::onUrlChanged);
 		this.addDrawableChild(urlField); 
 		this.setInitialFocus(urlField);
 
-		// Единственная кнопка подтверждения
 		this.addDrawableChild(ButtonWidget.builder(Text.literal("Add Field"), btn -> {
 			addField();
 		}).dimensions(this.width / 2 - 100, this.height / 2 + 50, 200, 20).build());
@@ -36,7 +33,7 @@ public class AddFieldScreen extends Screen {
 
 	private void onUrlChanged(String text) {
 		if (text.trim().isEmpty()) {
-			previewText = "Drag & Drop file here\nor type URL/path";
+			previewText = "Drag & Drop file here\nor paste URL/path (Ctrl+V)";
 		} else {
 			String lower = text.toLowerCase();
 			String type = "Image";
@@ -62,52 +59,49 @@ public class AddFieldScreen extends Screen {
 		}
 	}
 
-	// Встроенная поддержка Drag & Drop в Minecraft 1.21+
+	// ИСПРАВЛЕНО: возвращает boolean, как того требует Screen в 1.21+
 	@Override
-	public void filesDropped(List<Path> paths) {
+	public boolean filesDropped(List<Path> paths) {
 		if (paths != null && !paths.isEmpty()) {
-			Path path = paths.get(0); // Берём первый перетащенный файл
+			Path path = paths.get(0);
 			String fileName = path.getFileName().toString().toLowerCase();
 			
-			// Проверяем, что это изображение
 			if (fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
 			    fileName.endsWith(".gif") || fileName.endsWith(".webp")) {
-				String filePath = path.toString().replace("\\", "/");
+				// Используем абсолютный путь, чтобы Minecraft точно нашёл файл
+				String filePath = path.toAbsolutePath().toString().replace("\\", "/");
 				urlField.setText(filePath);
 				onUrlChanged(filePath);
+				return true;
 			} else {
 				previewText = "§cUnsupported file type!\n§7Only images and GIFs";
+				return true;
 			}
 		}
+		return super.filesDropped(paths);
 	}
 
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		// Тёмный полупрозрачный фон
 		context.fill(0, 0, this.width, this.height, 0x60000000);
-		
 		super.render(context, mouseX, mouseY, delta);
 		
-		// Заголовок
 		context.drawCenteredTextWithShadow(this.textRenderer, "Add New Overlay", this.width / 2, this.height / 2 - 90, 0xFFFFFF);
 
-		// --- Область Drag & Drop / Предпросмотра ---
+		// Область Drag & Drop / Предпросмотра
 		int dropX = this.width / 2 - 100;
 		int dropY = this.height / 2 - 70;
 		int dropW = 200;
 		int dropH = 70;
 		
-		// 1. Полупрозрачный фон зоны
 		context.fill(dropX, dropY, dropX + dropW, dropY + dropH, 0x40888888);
 		
-		// 2. Серая обводка (рисуем 4 линии для чёткой рамки)
 		int borderColor = 0xFFAAAAAA;
-		context.fill(dropX, dropY, dropX + dropW, dropY + 1, borderColor);       // Верх
-		context.fill(dropX, dropY + dropH - 1, dropX + dropW, dropY + dropH, borderColor); // Низ
-		context.fill(dropX, dropY, dropX + 1, dropY + dropH, borderColor);       // Лево
-		context.fill(dropX + dropW - 1, dropY, dropX + dropW, dropY + dropH, borderColor); // Право
+		context.fill(dropX, dropY, dropX + dropW, dropY + 1, borderColor);
+		context.fill(dropX, dropY + dropH - 1, dropX + dropW, dropY + dropH, borderColor);
+		context.fill(dropX, dropY, dropX + 1, dropY + dropH, borderColor);
+		context.fill(dropX + dropW - 1, dropY, dropX + dropW, dropY + dropH, borderColor);
 
-		// 3. Текст внутри зоны (поддержка переноса строки через \n)
 		String[] lines = previewText.split("\n");
 		int textY = dropY + (dropH / 2) - ((lines.length * 10) / 2) + 2;
 		for (String line : lines) {
@@ -115,7 +109,6 @@ public class AddFieldScreen extends Screen {
 			textY += 12;
 		}
 
-		// Рендер поля ввода и кнопки
 		urlField.render(context, mouseX, mouseY, delta);
 	}
 
