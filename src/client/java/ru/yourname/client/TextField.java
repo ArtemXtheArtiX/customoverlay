@@ -25,7 +25,6 @@ public class TextField {
 	public float alpha = 1.0f;
 	public float speed = 1.0f;
 	
-	// НОВОЕ: для сохранения пропорций в предпросмотре
 	public int originalWidth = 0, originalHeight = 0;
 	public boolean keepAspect = false;
 
@@ -54,7 +53,6 @@ public class TextField {
 
 	private void loadStatic(InputStream is) throws Exception {
 		NativeImage originalImg = NativeImage.read(is);
-		// Сохраняем оригинальные размеры
 		originalWidth = originalImg.getWidth();
 		originalHeight = originalImg.getHeight();
 		
@@ -87,7 +85,6 @@ public class TextField {
 						ImageIO.write(bImg, "png", this); 
 					}}.toByteArray());
 					
-					// Сохраняем оригинальные размеры (только для первого кадра)
 					if (i == 0) {
 						originalWidth = originalImg.getWidth();
 						originalHeight = originalImg.getHeight();
@@ -136,10 +133,8 @@ public class TextField {
 	public void render(DrawContext context, boolean editMode) {
 		if (!isLoaded) return;
 		
-		// Вычисляем цвет с учётом прозрачности
 		int color = ((int)(this.alpha * 255) << 24) | 0x00FFFFFF;
 
-		// НОВОЕ: вычисляем размеры с сохранением пропорций, если нужно
 		int drawW = width, drawH = height;
 		if (keepAspect && originalWidth > 0 && originalHeight > 0) {
 			float scaleX = (float) width / originalWidth;
