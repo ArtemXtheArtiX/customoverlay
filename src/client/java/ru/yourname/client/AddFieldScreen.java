@@ -6,6 +6,7 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
+import ru.yourname.Customoverlay; // <-- ДОБАВЛЕН ЭТОТ ИМПОРТ
 
 public class AddFieldScreen extends Screen {
 	private TextFieldWidget urlField;
@@ -22,7 +23,7 @@ public class AddFieldScreen extends Screen {
 		this.addDrawableChild(urlField); 
 		this.setInitialFocus(urlField);
 
-		// Кнопка 1: Вызов окна выбора файла / Drag & Drop (как в оригинале)
+		// Кнопка 1: Вызов окна выбора файла / Drag & Drop
 		this.addDrawableChild(ButtonWidget.builder(Text.literal("Select File / D&D"), btn -> {
 			openDragDropWindow();
 		}).dimensions(this.width / 2 - 100, this.height / 2 + 10, 95, 20).build());
@@ -34,7 +35,7 @@ public class AddFieldScreen extends Screen {
 	}
 
 	private void openDragDropWindow() {
-		// Здесь реализован базовый системный диалог выбора файла.
+		// Базовый системный диалог выбора файла. 
 		// Если у тебя была своя кастомная логика Drag & Drop, ты можешь заменить этот блок на неё.
 		try {
 			java.awt.FileDialog fileDialog = new java.awt.FileDialog((java.awt.Frame) null, "Select Image or GIF", java.awt.FileDialog.LOAD);
@@ -45,7 +46,7 @@ public class AddFieldScreen extends Screen {
 				urlField.setText(path.replace("\\", "/"));
 			}
 		} catch (Exception e) {
-			// Если AWT недоступен (например, в некоторых специфичных сборках Java), просто выводим в лог
+			// Если AWT недоступен, просто выводим в лог мода
 			Customoverlay.LOGGER.warn("AWT File Dialog not supported in this environment: " + e.getMessage());
 		}
 	}
