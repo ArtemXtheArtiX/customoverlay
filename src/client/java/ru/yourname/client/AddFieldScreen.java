@@ -49,6 +49,7 @@ public class AddFieldScreen extends Screen {
 			int dropCenterY = this.height / 2 - 35;
 			previewField = new TextField(dropCenterX - previewSize / 2, dropCenterY - previewSize / 2, previewSize, previewSize, text, isGif);
 			previewField.keepAspect = true;
+			previewField.isPreview = true; // ИСПРАВЛЕНО: отключаем анимацию в предпросмотре
 		}
 	}
 
@@ -57,10 +58,9 @@ public class AddFieldScreen extends Screen {
 		if (!source.isEmpty()) {
 			boolean isGif = source.toLowerCase().endsWith(".gif");
 			
-			// ИСПРАВЛЕНО: размещаем в центре экрана, а не в углу
 			int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
 			int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
-			int startX = screenWidth / 2 - 64;  // 128 / 2
+			int startX = screenWidth / 2 - 64;
 			int startY = screenHeight / 2 - 64;
 			
 			TextField newField = new TextField(startX, startY, 128, 128, source, isGif);
