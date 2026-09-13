@@ -10,7 +10,12 @@ import ru.yourname.Customoverlay;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
+import javax.imageio.metadata.IIOMetadata;
 import javax.imageio.stream.ImageInputStream;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.net.URL;
@@ -28,6 +33,7 @@ public class TextField {
 	
 	public int originalWidth = 0, originalHeight = 0;
 	public boolean keepAspect = false;
+	public boolean isPreview = false; // НОВОЕ: для отключения анимации в предпросмотре
 
 	private Identifier textureId;
 	private List<Identifier> gifTextureIds;
@@ -52,7 +58,6 @@ public class TextField {
 		}).start();
 	}
 
-	// НОВОЕ: конвертация BufferedImage в NativeImage для поддержки JPG, WEBP, BMP и т.д.
 	private NativeImage bufferedImageToNative(BufferedImage bImg) {
 		int w = bImg.getWidth();
 		int h = bImg.getHeight();
@@ -70,10 +75,8 @@ public class TextField {
 		NativeImage originalImg;
 		
 		if (lower.endsWith(".png")) {
-			// PNG: NativeImage читает напрямую
 			originalImg = NativeImage.read(is);
 		} else {
-			// JPG, JPEG, WEBP, BMP и другие: читаем через ImageIO и конвертируем
 			BufferedImage bImg = ImageIO.read(is);
 			if (bImg == null) throw new Exception("Unsupported image format");
 			originalImg = bufferedImageToNative(bImg);
@@ -100,23 +103,91 @@ public class TextField {
 		});
 	}
 
+	// ИСПРАВЛЕНО: правильная логика декодирования GIF с наложением кадров и disposal methods
 	private void loadGif(InputStream is) throws Exception {
 		ImageInputStream iis = ImageIO.createImageInputStream(is);
 		ImageReader reader = ImageIO.getImageReadersByFormatName("gif").next();
 		reader.setInput(iis);
 		int numFrames = reader.getNumImages(true);
-		MinecraftClient.getInstance().execute(() -> {
-			gifTextureIds = new ArrayList<>(); 
-			frameDelays = new ArrayList<>();
-			for (int i = 0; i < numFrames; i++) {
-				try {
-					BufferedImage bImg = reader.read(i);
-					NativeImage originalImg = bufferedImageToNative(bImg);
-					
-					if (i == 0) {
-						originalWidth = originalImg.getWidth();
-						originalHeight = originalImg.getHeight();
+		
+		// Первый кадр для определения размера холста
+		BufferedImage firstFrame = reader.read(0);
+		int canvasWidth = firstFrame.getWidth();
+		int canvasHeight = firstFrame.getHeight();
+		
+		originalWidth = canvasWidth;
+		originalHeight = canvasHeight;
+		
+		// Массивы для хранения метаданных каждого кадра
+		int[] frameDelaysRaw = new int[numFrames];
+		int[] disposalMethods = new int[numFrames];
+		
+		// Читаем метаданные всех кадров
+		for (int i = 0; i < numFrames; i++) {
+			IIOMetadata meta = reader.getImageMetadata(i);
+			String metaFormat = meta.getNativeMetadataFormatName();
+			if ("javax_imageio_gif_image_1.0".equals(metaFormat)) {
+				Node tree = meta.getAsTree(metaFormat);
+				NodeList children = tree.getChildNodes();
+				for (int j = 0; j < children.getLength(); j++) {
+					Node node = children.item(j);
+					if ("GraphicControlExtension".equals(node.getNodeName())) {
+						NodeList attrs = node.getChildNodes();
+						for (int k = 0; k < attrs.getLength(); k++) {
+							Node attr = attrs.item(k);
+							if ("delayTime".equals(attr.getNodeName())) {
+								frameDelaysRaw[i] = Integer.parseInt(attr.getAttributes().getNamedItem("value").getNodeValue()) * 10; // в миллисекунды
+							}
+							if ("disposalMethod".equals(attr.getNodeName())) {
+								disposalMethods[i] = Integer.parseInt(attr.getAttributes().getNamedItem("value").getNodeValue());
+							}
+						}
 					}
+				}
+			}
+			if (frameDelaysRaw[i] == 0) frameDelaysRaw[i] = 100; // дефолтная задержка
+		}
+		
+		// Создаём холст и последовательно накладываем кадры
+		BufferedImage currentCanvas = new BufferedImage(canvasWidth, canvasHeight, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = currentCanvas.createGraphics();
+		
+		List<BufferedImage> fullFrames = new ArrayList<>();
+		
+		for (int i = 0; i < numFrames; i++) {
+			BufferedImage partial = reader.read(i);
+			if (partial == null) continue;
+			
+			// Применяем disposal method предыдущего кадра
+			if (i > 0 && disposalMethods[i - 1] == 2) {
+				// Restore to background: очищаем холст
+				g.setComposite(AlphaComposite.Clear);
+				g.fillRect(0, 0, canvasWidth, canvasHeight);
+				g.setComposite(AlphaComposite.SrcOver);
+			}
+			
+			// Рисуем текущий кадр на холст
+			g.drawImage(partial, 0, 0, null);
+			
+			// Копируем текущее состояние холста как итоговый кадр
+			BufferedImage copy = new BufferedImage(canvasWidth, canvasHeight, BufferedImage.TYPE_INT_ARGB);
+			Graphics2D copyG = copy.createGraphics();
+			copyG.drawImage(currentCanvas, 0, 0, null);
+			copyG.dispose();
+			fullFrames.add(copy);
+		}
+		g.dispose();
+		reader.dispose();
+		
+		// Конвертируем в текстуры
+		MinecraftClient.getInstance().execute(() -> {
+			gifTextureIds = new ArrayList<>();
+			frameDelays = new ArrayList<>();
+			
+			for (int i = 0; i < fullFrames.size(); i++) {
+				try {
+					BufferedImage bImg = fullFrames.get(i);
+					NativeImage originalImg = bufferedImageToNative(bImg);
 					
 					final NativeImage finalImg;
 					if (originalImg.getWidth() > MAX_DIMENSION || originalImg.getHeight() > MAX_DIMENSION) {
@@ -129,13 +200,12 @@ public class TextField {
 					NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "customoverlay", finalImg);
 					Identifier id = Identifier.of("customoverlay", "gif_" + imageUrlOrPath.hashCode() + "_" + i);
 					MinecraftClient.getInstance().getTextureManager().registerTexture(id, tex);
-					gifTextureIds.add(id); 
-					frameDelays.add(100);
-				} catch (Exception e) { 
-					Customoverlay.LOGGER.warn("Skipped frame " + i); 
+					gifTextureIds.add(id);
+					frameDelays.add(frameDelaysRaw[i]);
+				} catch (Exception e) {
+					Customoverlay.LOGGER.warn("Skipped frame " + i);
 				}
 			}
-			reader.dispose();
 			
 			if (keepAspect && originalWidth > 0 && originalHeight > 0) {
 				adjustSizeToAspect();
@@ -177,11 +247,17 @@ public class TextField {
 		int color = ((int)(this.alpha * 255) << 24) | 0x00FFFFFF;
 
 		if (isGif && gifTextureIds != null && !gifTextureIds.isEmpty()) {
-			long now = System.currentTimeMillis();
-			if (now - lastFrameTime >= (frameDelays.get(currentFrame) / speed)) {
-				currentFrame = (currentFrame + 1) % gifTextureIds.size(); 
-				lastFrameTime = now;
+			// ИСПРАВЛЕНО: в предпросмотре не проигрываем анимацию, показываем только первый кадр
+			if (!isPreview) {
+				long now = System.currentTimeMillis();
+				if (now - lastFrameTime >= (frameDelays.get(currentFrame) / speed)) {
+					currentFrame = (currentFrame + 1) % gifTextureIds.size(); 
+					lastFrameTime = now;
+				}
+			} else {
+				currentFrame = 0; // Всегда первый кадр в предпросмотре
 			}
+			
 			Identifier currentId = gifTextureIds.get(currentFrame);
 			context.drawTexture(RenderPipelines.GUI_TEXTURED, currentId, x, y, 0.0f, 0.0f, width, height, width, height, color);
 		} else if (textureId != null) {
