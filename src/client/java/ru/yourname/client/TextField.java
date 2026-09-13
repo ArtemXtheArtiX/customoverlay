@@ -103,7 +103,7 @@ public class TextField {
 		});
 	}
 
-	// ИСПРАВЛЕНО: упрощённая логика без очистки холста для гифок с прозрачностью
+	// ИСПРАВЛЕНО: правильная обработка disposal methods
 	private void loadGif(InputStream is) throws Exception {
 		ImageInputStream iis = ImageIO.createImageInputStream(is);
 		ImageReader reader = ImageIO.getImageReadersByFormatName("gif").next();
@@ -117,8 +117,10 @@ public class TextField {
 		originalWidth = canvasWidth;
 		originalHeight = canvasHeight;
 		
-		// Читаем задержки кадров
+		// Читаем метаданные всех кадров
 		int[] frameDelaysRaw = new int[numFrames];
+		int[] disposalMethods = new int[numFrames];
+		
 		for (int i = 0; i < numFrames; i++) {
 			IIOMetadata meta = reader.getImageMetadata(i);
 			String metaFormat = meta.getNativeMetadataFormatName();
@@ -133,6 +135,9 @@ public class TextField {
 							Node attr = attrs.item(k);
 							if ("delayTime".equals(attr.getNodeName())) {
 								frameDelaysRaw[i] = Integer.parseInt(attr.getAttributes().getNamedItem("value").getNodeValue()) * 10;
+							}
+							if ("disposalMethod".equals(attr.getNodeName())) {
+								disposalMethods[i] = Integer.parseInt(attr.getAttributes().getNamedItem("value").getNodeValue());
 							}
 						}
 					}
@@ -151,8 +156,15 @@ public class TextField {
 			BufferedImage partial = reader.read(i);
 			if (partial == null) continue;
 			
-			// ИСПРАВЛЕНО: просто рисуем кадр поверх предыдущего без очистки
-			// Это правильно работает для гифок с прозрачностью
+			// ИСПРАВЛЕНО: очищаем холст ПЕРЕД рисованием, если предыдущий кадр требовал этого
+			if (i > 0 && disposalMethods[i - 1] == 2) {
+				// Restore to background: очищаем область предыдущего кадра
+				g.setComposite(AlphaComposite.Clear);
+				g.fillRect(0, 0, canvasWidth, canvasHeight);
+				g.setComposite(AlphaComposite.SrcOver);
+			}
+			
+			// Рисуем текущий кадр
 			g.drawImage(partial, 0, 0, null);
 			
 			// Копируем текущее состояние холста
