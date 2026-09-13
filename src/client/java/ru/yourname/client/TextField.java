@@ -33,7 +33,7 @@ public class TextField {
 	
 	public int originalWidth = 0, originalHeight = 0;
 	public boolean keepAspect = false;
-	public boolean isPreview = false; // НОВОЕ: для отключения анимации в предпросмотре
+	public boolean isPreview = false;
 
 	private Identifier textureId;
 	private List<Identifier> gifTextureIds;
@@ -103,14 +103,13 @@ public class TextField {
 		});
 	}
 
-	// ИСПРАВЛЕНО: правильная логика декодирования GIF с наложением кадров и disposal methods
+	// ИСПРАВЛЕНО: упрощённая логика без очистки холста для гифок с прозрачностью
 	private void loadGif(InputStream is) throws Exception {
 		ImageInputStream iis = ImageIO.createImageInputStream(is);
 		ImageReader reader = ImageIO.getImageReadersByFormatName("gif").next();
 		reader.setInput(iis);
 		int numFrames = reader.getNumImages(true);
 		
-		// Первый кадр для определения размера холста
 		BufferedImage firstFrame = reader.read(0);
 		int canvasWidth = firstFrame.getWidth();
 		int canvasHeight = firstFrame.getHeight();
@@ -118,11 +117,8 @@ public class TextField {
 		originalWidth = canvasWidth;
 		originalHeight = canvasHeight;
 		
-		// Массивы для хранения метаданных каждого кадра
+		// Читаем задержки кадров
 		int[] frameDelaysRaw = new int[numFrames];
-		int[] disposalMethods = new int[numFrames];
-		
-		// Читаем метаданные всех кадров
 		for (int i = 0; i < numFrames; i++) {
 			IIOMetadata meta = reader.getImageMetadata(i);
 			String metaFormat = meta.getNativeMetadataFormatName();
@@ -136,19 +132,16 @@ public class TextField {
 						for (int k = 0; k < attrs.getLength(); k++) {
 							Node attr = attrs.item(k);
 							if ("delayTime".equals(attr.getNodeName())) {
-								frameDelaysRaw[i] = Integer.parseInt(attr.getAttributes().getNamedItem("value").getNodeValue()) * 10; // в миллисекунды
-							}
-							if ("disposalMethod".equals(attr.getNodeName())) {
-								disposalMethods[i] = Integer.parseInt(attr.getAttributes().getNamedItem("value").getNodeValue());
+								frameDelaysRaw[i] = Integer.parseInt(attr.getAttributes().getNamedItem("value").getNodeValue()) * 10;
 							}
 						}
 					}
 				}
 			}
-			if (frameDelaysRaw[i] == 0) frameDelaysRaw[i] = 100; // дефолтная задержка
+			if (frameDelaysRaw[i] == 0) frameDelaysRaw[i] = 100;
 		}
 		
-		// Создаём холст и последовательно накладываем кадры
+		// Создаём холст
 		BufferedImage currentCanvas = new BufferedImage(canvasWidth, canvasHeight, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = currentCanvas.createGraphics();
 		
@@ -158,18 +151,11 @@ public class TextField {
 			BufferedImage partial = reader.read(i);
 			if (partial == null) continue;
 			
-			// Применяем disposal method предыдущего кадра
-			if (i > 0 && disposalMethods[i - 1] == 2) {
-				// Restore to background: очищаем холст
-				g.setComposite(AlphaComposite.Clear);
-				g.fillRect(0, 0, canvasWidth, canvasHeight);
-				g.setComposite(AlphaComposite.SrcOver);
-			}
-			
-			// Рисуем текущий кадр на холст
+			// ИСПРАВЛЕНО: просто рисуем кадр поверх предыдущего без очистки
+			// Это правильно работает для гифок с прозрачностью
 			g.drawImage(partial, 0, 0, null);
 			
-			// Копируем текущее состояние холста как итоговый кадр
+			// Копируем текущее состояние холста
 			BufferedImage copy = new BufferedImage(canvasWidth, canvasHeight, BufferedImage.TYPE_INT_ARGB);
 			Graphics2D copyG = copy.createGraphics();
 			copyG.drawImage(currentCanvas, 0, 0, null);
@@ -247,7 +233,6 @@ public class TextField {
 		int color = ((int)(this.alpha * 255) << 24) | 0x00FFFFFF;
 
 		if (isGif && gifTextureIds != null && !gifTextureIds.isEmpty()) {
-			// ИСПРАВЛЕНО: в предпросмотре не проигрываем анимацию, показываем только первый кадр
 			if (!isPreview) {
 				long now = System.currentTimeMillis();
 				if (now - lastFrameTime >= (frameDelays.get(currentFrame) / speed)) {
@@ -255,7 +240,7 @@ public class TextField {
 					lastFrameTime = now;
 				}
 			} else {
-				currentFrame = 0; // Всегда первый кадр в предпросмотре
+				currentFrame = 0;
 			}
 			
 			Identifier currentId = gifTextureIds.get(currentFrame);
