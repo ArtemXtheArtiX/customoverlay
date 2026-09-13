@@ -11,6 +11,7 @@ import ru.yourname.Customoverlay;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
+import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
@@ -51,8 +52,33 @@ public class TextField {
 		}).start();
 	}
 
+	// НОВОЕ: конвертация BufferedImage в NativeImage для поддержки JPG, WEBP, BMP и т.д.
+	private NativeImage bufferedImageToNative(BufferedImage bImg) {
+		int w = bImg.getWidth();
+		int h = bImg.getHeight();
+		NativeImage nativeImg = new NativeImage(NativeImage.Format.RGBA, w, h, false);
+		for (int py = 0; py < h; py++) {
+			for (int px = 0; px < w; px++) {
+				nativeImg.setColorArgb(px, py, bImg.getRGB(px, py));
+			}
+		}
+		return nativeImg;
+	}
+
 	private void loadStatic(InputStream is) throws Exception {
-		NativeImage originalImg = NativeImage.read(is);
+		String lower = imageUrlOrPath.toLowerCase();
+		NativeImage originalImg;
+		
+		if (lower.endsWith(".png")) {
+			// PNG: NativeImage читает напрямую
+			originalImg = NativeImage.read(is);
+		} else {
+			// JPG, JPEG, WEBP, BMP и другие: читаем через ImageIO и конвертируем
+			BufferedImage bImg = ImageIO.read(is);
+			if (bImg == null) throw new Exception("Unsupported image format");
+			originalImg = bufferedImageToNative(bImg);
+		}
+		
 		originalWidth = originalImg.getWidth();
 		originalHeight = originalImg.getHeight();
 		
@@ -68,7 +94,6 @@ public class TextField {
 			textureId = Identifier.of("customoverlay", "static_" + imageUrlOrPath.hashCode());
 			MinecraftClient.getInstance().getTextureManager().registerTexture(textureId, tex);
 			
-			// Автоматическая подстройка размеров под пропорции
 			if (keepAspect && originalWidth > 0 && originalHeight > 0) {
 				adjustSizeToAspect();
 			}
@@ -85,10 +110,8 @@ public class TextField {
 			frameDelays = new ArrayList<>();
 			for (int i = 0; i < numFrames; i++) {
 				try {
-					java.awt.image.BufferedImage bImg = reader.read(i);
-					NativeImage originalImg = NativeImage.read(new java.io.ByteArrayOutputStream() {{ 
-						ImageIO.write(bImg, "png", this); 
-					}}.toByteArray());
+					BufferedImage bImg = reader.read(i);
+					NativeImage originalImg = bufferedImageToNative(bImg);
 					
 					if (i == 0) {
 						originalWidth = originalImg.getWidth();
@@ -114,7 +137,6 @@ public class TextField {
 			}
 			reader.dispose();
 			
-			// Автоматическая подстройка размеров под пропорции
 			if (keepAspect && originalWidth > 0 && originalHeight > 0) {
 				adjustSizeToAspect();
 			}
@@ -124,10 +146,8 @@ public class TextField {
 	private void adjustSizeToAspect() {
 		float aspect = (float) originalWidth / originalHeight;
 		if (aspect > 1) {
-			// Горизонтальное изображение
 			height = (int) (width / aspect);
 		} else {
-			// Вертикальное изображение
 			width = (int) (height * aspect);
 		}
 	}
