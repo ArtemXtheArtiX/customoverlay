@@ -98,7 +98,7 @@ public class TextField {
 
 	private void loadGif(InputStream is) throws Exception {
 		GifDecoder.GifImage gif = GifDecoder.read(is);
-		if (gif.status != GifDecoder.STATUS_OK || gif.getFrameCount() == 0) {
+		if (gif.getFrameCount() == 0) {
 			throw new Exception("Invalid or empty GIF");
 		}
 		
