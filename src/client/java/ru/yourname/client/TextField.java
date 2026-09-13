@@ -9,13 +9,6 @@ import net.minecraft.util.Identifier;
 import ru.yourname.Customoverlay;
 
 import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.metadata.IIOMetadata;
-import javax.imageio.stream.ImageInputStream;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.net.URL;
@@ -103,88 +96,23 @@ public class TextField {
 		});
 	}
 
-	// ИСПРАВЛЕНО: правильная обработка disposal methods
+	// ИСПРАВЛЕНО: используем GifDecoder вместо ImageIO
 	private void loadGif(InputStream is) throws Exception {
-		ImageInputStream iis = ImageIO.createImageInputStream(is);
-		ImageReader reader = ImageIO.getImageReadersByFormatName("gif").next();
-		reader.setInput(iis);
-		int numFrames = reader.getNumImages(true);
+		GifDecoder.GifImage gif = GifDecoder.read(is);
+		int numFrames = gif.getFrameCount();
 		
-		BufferedImage firstFrame = reader.read(0);
-		int canvasWidth = firstFrame.getWidth();
-		int canvasHeight = firstFrame.getHeight();
+		if (numFrames == 0) throw new Exception("No frames in GIF");
 		
-		originalWidth = canvasWidth;
-		originalHeight = canvasHeight;
+		originalWidth = gif.getWidth();
+		originalHeight = gif.getHeight();
 		
-		// Читаем метаданные всех кадров
-		int[] frameDelaysRaw = new int[numFrames];
-		int[] disposalMethods = new int[numFrames];
-		
-		for (int i = 0; i < numFrames; i++) {
-			IIOMetadata meta = reader.getImageMetadata(i);
-			String metaFormat = meta.getNativeMetadataFormatName();
-			if ("javax_imageio_gif_image_1.0".equals(metaFormat)) {
-				Node tree = meta.getAsTree(metaFormat);
-				NodeList children = tree.getChildNodes();
-				for (int j = 0; j < children.getLength(); j++) {
-					Node node = children.item(j);
-					if ("GraphicControlExtension".equals(node.getNodeName())) {
-						NodeList attrs = node.getChildNodes();
-						for (int k = 0; k < attrs.getLength(); k++) {
-							Node attr = attrs.item(k);
-							if ("delayTime".equals(attr.getNodeName())) {
-								frameDelaysRaw[i] = Integer.parseInt(attr.getAttributes().getNamedItem("value").getNodeValue()) * 10;
-							}
-							if ("disposalMethod".equals(attr.getNodeName())) {
-								disposalMethods[i] = Integer.parseInt(attr.getAttributes().getNamedItem("value").getNodeValue());
-							}
-						}
-					}
-				}
-			}
-			if (frameDelaysRaw[i] == 0) frameDelaysRaw[i] = 100;
-		}
-		
-		// Создаём холст
-		BufferedImage currentCanvas = new BufferedImage(canvasWidth, canvasHeight, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g = currentCanvas.createGraphics();
-		
-		List<BufferedImage> fullFrames = new ArrayList<>();
-		
-		for (int i = 0; i < numFrames; i++) {
-			BufferedImage partial = reader.read(i);
-			if (partial == null) continue;
-			
-			// ИСПРАВЛЕНО: очищаем холст ПЕРЕД рисованием, если предыдущий кадр требовал этого
-			if (i > 0 && disposalMethods[i - 1] == 2) {
-				// Restore to background: очищаем область предыдущего кадра
-				g.setComposite(AlphaComposite.Clear);
-				g.fillRect(0, 0, canvasWidth, canvasHeight);
-				g.setComposite(AlphaComposite.SrcOver);
-			}
-			
-			// Рисуем текущий кадр
-			g.drawImage(partial, 0, 0, null);
-			
-			// Копируем текущее состояние холста
-			BufferedImage copy = new BufferedImage(canvasWidth, canvasHeight, BufferedImage.TYPE_INT_ARGB);
-			Graphics2D copyG = copy.createGraphics();
-			copyG.drawImage(currentCanvas, 0, 0, null);
-			copyG.dispose();
-			fullFrames.add(copy);
-		}
-		g.dispose();
-		reader.dispose();
-		
-		// Конвертируем в текстуры
 		MinecraftClient.getInstance().execute(() -> {
 			gifTextureIds = new ArrayList<>();
 			frameDelays = new ArrayList<>();
 			
-			for (int i = 0; i < fullFrames.size(); i++) {
+			for (int i = 0; i < numFrames; i++) {
 				try {
-					BufferedImage bImg = fullFrames.get(i);
+					BufferedImage bImg = gif.getFrame(i);
 					NativeImage originalImg = bufferedImageToNative(bImg);
 					
 					final NativeImage finalImg;
@@ -199,7 +127,7 @@ public class TextField {
 					Identifier id = Identifier.of("customoverlay", "gif_" + imageUrlOrPath.hashCode() + "_" + i);
 					MinecraftClient.getInstance().getTextureManager().registerTexture(id, tex);
 					gifTextureIds.add(id);
-					frameDelays.add(frameDelaysRaw[i]);
+					frameDelays.add(gif.getDelay(i));
 				} catch (Exception e) {
 					Customoverlay.LOGGER.warn("Skipped frame " + i);
 				}
