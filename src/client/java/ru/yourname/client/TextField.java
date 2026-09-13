@@ -96,7 +96,6 @@ public class TextField {
 		});
 	}
 
-	// ИСПРАВЛЕНО: используем GifDecoder вместо ImageIO
 	private void loadGif(InputStream is) throws Exception {
 		GifDecoder.GifImage gif = GifDecoder.read(is);
 		int numFrames = gif.getFrameCount();
