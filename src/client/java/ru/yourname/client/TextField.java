@@ -166,13 +166,48 @@ public class TextField {
 		return resized;
 	}
 
-	public void render(DrawContext context, boolean editMode) {
-		if (!isLoaded) return;
+		public void render(DrawContext context, boolean editMode) {
+		// Если файл ещё не загружен, показываем placeholder и полоску загрузки
+		if (!isLoaded) {
+			int placeholderColor = ((int)(this.alpha * 255) << 24) | 0x20202020;
+			context.fill(x, y, x + width, y + height, placeholderColor);
+			
+			if (editMode) {
+				// Анимированная полоска загрузки
+				int barWidth = Math.min(width - 10, 80);
+				int barHeight = 6;
+				int barX = x + (width / 2) - (barWidth / 2);
+				int barY = y + (height / 2) - (barHeight / 2);
+				
+				// Фон полоски
+				context.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFF444444);
+				
+				// Движущаяся часть (цикл 1.5 секунды)
+				long time = System.currentTimeMillis();
+				float progress = (time % 1500) / 1500.0f;
+				int progressWidth = (int) (barWidth * progress);
+				context.fill(barX, barY, barX + progressWidth, barY + barHeight, 0xFFFFFFFF);
+				
+				// Обводка полоски
+				context.fill(barX, barY, barX + barWidth, barY + 1, 0xFFAAAAAA);
+				context.fill(barX, barY + barHeight - 1, barX + barWidth, barY + barHeight, 0xFFAAAAAA);
+				context.fill(barX, barY, barX + 1, barY + barHeight, 0xFFAAAAAA);
+				context.fill(barX + barWidth - 1, barY, barX + barWidth, barY + barHeight, 0xFFAAAAAA);
+				
+				// Жёлтая обводка самого поля (чтобы можно было его двигать)
+				int bx = x - 2, by = y - 2, bw = width + 4, bh = height + 4;
+				int c = 0xFFFFFF00;
+				context.fill(bx, by, bx + bw, by + 1, c);
+				context.fill(bx, by + bh - 1, bx + bw, by + bh, c);
+				context.fill(bx, by, bx + 1, by + bh, c);
+				context.fill(bx + bw - 1, by, bx + bw, by + bh, c);
+			}
+			return;
+		}
 		
 		int color = ((int)(this.alpha * 255) << 24) | 0x00FFFFFF;
 
 		if (isGif && gifTextureIds != null && !gifTextureIds.isEmpty()) {
-			// ЖЕСТКОЕ ПРАВИЛО: если это предпросмотр, мы НИКОГДА не анимируем и всегда показываем кадр 0
 			if (!isPreview) {
 				long now = System.currentTimeMillis();
 				if (now - lastFrameTime >= (frameDelays.get(currentFrame) / speed)) {
@@ -180,7 +215,7 @@ public class TextField {
 					lastFrameTime = now;
 				}
 			} else {
-				currentFrame = 0; // Принудительно первый кадр, без обновлений времени
+				currentFrame = 0;
 			}
 			
 			Identifier currentId = gifTextureIds.get(currentFrame);
