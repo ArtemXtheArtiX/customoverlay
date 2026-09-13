@@ -1,5 +1,6 @@
 package ru.yourname.client;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -55,7 +56,14 @@ public class AddFieldScreen extends Screen {
 		String source = urlField.getText().trim();
 		if (!source.isEmpty()) {
 			boolean isGif = source.toLowerCase().endsWith(".gif");
-			TextField newField = new TextField(50, 50, 128, 128, source, isGif);
+			
+			// ИСПРАВЛЕНО: размещаем в центре экрана, а не в углу
+			int screenWidth = MinecraftClient.getInstance().getWindow().getScaledWidth();
+			int screenHeight = MinecraftClient.getInstance().getWindow().getScaledHeight();
+			int startX = screenWidth / 2 - 64;  // 128 / 2
+			int startY = screenHeight / 2 - 64;
+			
+			TextField newField = new TextField(startX, startY, 128, 128, source, isGif);
 			newField.keepAspect = true;
 			OverlayRenderer.fields.add(newField);
 			ConfigManager.save(); 
@@ -70,7 +78,7 @@ public class AddFieldScreen extends Screen {
 			String fileName = path.getFileName().toString().toLowerCase();
 			
 			if (fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
-			    fileName.endsWith(".gif") || fileName.endsWith(".webp")) {
+			    fileName.endsWith(".gif") || fileName.endsWith(".webp") || fileName.endsWith(".bmp")) {
 				String filePath = path.toAbsolutePath().toString().replace("\\", "/");
 				urlField.setText(filePath);
 				onUrlChanged(filePath);
